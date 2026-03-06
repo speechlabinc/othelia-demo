@@ -1,19 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>
-(function(){
-  var k = sessionStorage.getItem("othelia_auth");
-  if(k !== "ok"){
-    var p = prompt("Enter password to access this demo:");
-    if(p !== "othelia!@#!"){
-      document.body.innerHTML = "<div style=\"height:100vh;display:flex;align-items:center;justify-content:center;background:#060610;color:#555;font-family:sans-serif\">Access denied.</div>";
-      return;
-    }
-    sessionStorage.setItem("othelia_auth","ok");
-  }
-})();
-</script>
 <meta charset="UTF-8">
 <title>Othelia — Data Structure</title>
 <style>
@@ -58,7 +45,10 @@ a.back:hover{color:#c9a84c}
 <div class="wrap">
 <div class="sidebar">
   <h3>New Models</h3>
+  <div class="sitem"     onclick="highlight('org')">Organization (existing)</div>
   <div class="sitem on"  onclick="highlight('franchise')">Franchise</div>
+  <div class="sitem"     onclick="highlight('conflict')">EntityConflict</div>
+  <div class="sitem"     onclick="highlight('chatcontext')">ChatThread (updated)</div>
   <div class="sitem"     onclick="highlight('title')">FranchiseTitle</div>
   <div class="sitem"     onclick="highlight('canonchar')">CanonicalCharacter</div>
   <div class="sitem"     onclick="highlight('appearance')">CharacterAppearance</div>
@@ -87,9 +77,18 @@ a.back:hover{color:#c9a84c}
 </div>
 <script>
 const MODELS = {
+  org: {
+    label:"Organization", x:80, y:20, w:220, color:"#666",
+    desc:"EXISTING model — unchanged. Organizations own Franchises, Projects, and Users. Adding the Franchise model requires linking it to Organization for multi-tenant access control.",
+    fields:[
+      {n:"id",          t:"String",  k:"PK"},
+      {n:"name",        t:"String"},
+      {n:"... existing fields ...", t:""},
+    ]
+  },
   franchise: {
     label:"Franchise", x:80, y:160, w:220, color:"#c9a84c",
-    desc:"Top-level universe container. New model. Holds all titles, canonical characters, and their cross-title relationships. Does not touch existing Project tables.",
+    desc:"Top-level universe container. New model. Owned by an Organization. Holds all titles, canonical characters, and their cross-title relationships. Does not touch existing Project tables.",
     fields:[
       {n:"id",             t:"String",   k:"PK"},
       {n:"name",           t:"String",   note:"e.g. Dune, James Bond"},
@@ -189,6 +188,31 @@ const MODELS = {
       {n:"deletedAt",       t:"DateTime?", k:"NEW",  note:"NEW: soft delete for rollback"},
     ]
   },
+  conflict: {
+    label:"EntityConflict", x:1140, y:430, w:230, color:"#e06060",
+    desc:"Records genuine contradictions between two sources about the same entity field. Created by the Phase 3 merge algorithm. Surfaces in the Phase 4 Merge Review UI for human resolution.",
+    fields:[
+      {n:"id",                t:"String",   k:"PK"},
+      {n:"franchiseId",       t:"String",   k:"FK", note:"-> Franchise"},
+      {n:"canonCharacterId",  t:"String?",  k:"FK", note:"-> CanonicalCharacter"},
+      {n:"fieldName",         t:"String",   note:"e.g. description, role"},
+      {n:"sourceAId",         t:"String",   k:"FK", note:"-> Source"},
+      {n:"sourceAValue",      t:"String",   note:"What source A says"},
+      {n:"sourceBId",         t:"String",   k:"FK", note:"-> Source"},
+      {n:"sourceBValue",      t:"String",   note:"What source B says"},
+      {n:"resolvedBy",        t:"Enum?",    note:"CANON_TIER | USER | AI"},
+      {n:"resolvedAt",        t:"DateTime?"},
+    ]
+  },
+  chatcontext: {
+    label:"ChatThread (updated)", x:1140, y:660, w:230, color:"#60c0c0",
+    desc:"UPDATED: Existing ChatThread gains franchiseId and canonTierScope. Required for AskOthelia canon-scoped retrieval — the agent must know which franchise and which canon tiers to search. Without this, non-canon data can seep into responses (Lionsgate requirement).",
+    fields:[
+      {n:"... existing fields ...", t:""},
+      {n:"franchiseId",     t:"String? FK NEW", note:"NEW -> Franchise (optional)"},
+      {n:"canonTierScope",  t:"Enum[] NEW",     note:"NEW: which tiers to include"},
+    ]
+  },
   project: {
     label:"Project (existing)", x:1140, y:60, w:220, color:"#555",
     desc:"EXISTING model — unchanged. FranchiseTitle optionally links to a Project when that title has been extracted into Othelia. All new franchise models sit above this layer.",
@@ -201,17 +225,20 @@ const MODELS = {
 };
 
 const EDGES = [
+  {f:"org",        t:"franchise",   lbl:"owns",          color:"#66666644", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
   {f:"franchise",  t:"title",       lbl:"1 : many",      color:"#c9a84c44", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
   {f:"franchise",  t:"canonchar",   lbl:"1 : many",      color:"#f0c04044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
   {f:"franchise",  t:"titlelink",   lbl:"1 : many",      color:"#b07ef744", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
   {f:"title",      t:"appearance",  lbl:"1 : many",      color:"#80c06044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
   {f:"canonchar",  t:"appearance",  lbl:"1 : many",      color:"#f0c04044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"canonchar",  t:"conflict",    lbl:"has conflicts", color:"#e0606044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
   {f:"title",      t:"titlelink",   lbl:"source/target", color:"#b07ef744", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
   {f:"title",      t:"project",     lbl:"optional",      color:"#55555544", ox:"right",  oy:"top",  ix:"left",  iy:"top"},
   {f:"title",      t:"source",      lbl:"1 : many",      color:"#e0804044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
   {f:"source",     t:"entity",      lbl:"1 : many",      color:"#60c0a044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
   {f:"source",     t:"extractionrun",lbl:"1 : many",     color:"#e0606044", ox:"top",    oy:"mid",  ix:"bottom",iy:"mid"},
   {f:"extractionrun",t:"entity",    lbl:"1 : many",      color:"#60c0a044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
+  {f:"franchise",  t:"chatcontext", lbl:"scopes chat",   color:"#60c0c044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
 ];
 
 const ns = "http://www.w3.org/2000/svg";
@@ -223,7 +250,7 @@ function svgEl(tag, attrs, parent) {
 }
 
 let activeModel = "franchise";
-let zoom = 0.62, panX = 10, panY = 10, dragging = false, lastX = 0, lastY = 0;
+let zoom = 0.52, panX = 10, panY = 5, dragging = false, lastX = 0, lastY = 0;
 
 function nodePort(m, side) {
   const w = m.w || 220;
