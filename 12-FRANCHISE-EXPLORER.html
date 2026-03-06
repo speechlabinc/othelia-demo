@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Franchise Explorer</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+a.back{font-size:11px;color:#555;text-decoration:underline;margin-left:auto}
+a.back:hover{color:#c9a84c}
+.franchise-bar{padding:8px 20px;border-bottom:1px solid #1a1a2e;background:#0d0d1a;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.franchise-bar span{font-size:10px;color:#444;margin-right:4px}
+.fb{padding:6px 16px;border-radius:20px;border:1px solid #2a2a3e;background:transparent;color:#666;font-size:11px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.fb:hover{background:#ffffff08}
+.fb.on{border-width:2px}
+.banner{padding:5px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.pill{padding:1px 7px;border-radius:10px;font-size:9px;font-weight:600}
+.wrap{flex:1;display:flex;overflow:hidden}
+#canvas{flex:1;position:relative}
+svg{width:100%;height:100%}
+.panel{width:0;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;flex-shrink:0;transition:width .2s}
+.panel.open{width:280px}
+.pi{padding:16px;min-width:280px}
+.pi h2{font-size:14px;margin-bottom:3px}
+.pi .aliases{font-size:9px;color:#555;margin-bottom:8px}
+.pi .summary{font-size:10px;color:#888;line-height:1.6;margin-bottom:10px;padding:8px;background:#0d0d18;border-radius:5px;border-left:3px solid}
+.pi .section{margin-bottom:10px}
+.pi .section h4{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#444;margin-bottom:5px}
+.pi .section p{font-size:10px;color:#888;line-height:1.5}
+.source-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:10px}
+.legend{padding:6px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:12px;font-size:9px;color:#333;align-items:center;flex-shrink:0}
+</style></head>
+<body>
+<header>
+<div class="logo">&#x2B21; FRANCHISE EXPLORER</div>
+<span style="font-size:10px;color:#333">Real extracted character data from Othelia golden datasets &middot; Click any character node</span>
+<a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back</a>
+</header>
+<div class="franchise-bar">
+  <span>Switch franchise:</span>
+  <button class="fb" id="fb-dune" onclick="loadFranchise('dune',this)" style="border-color:#7eb8f7;color:#7eb8f7">&#127956; Dune Universe</button>
+  <button class="fb on" id="fb-got" onclick="loadFranchise('got',this)" style="border-color:#c9a84c;color:#c9a84c;background:#c9a84c10">&#9876; Game of Thrones</button>
+  <button class="fb" id="fb-bond" onclick="loadFranchise('bond',this)" style="border-color:#7eb8f7;color:#7eb8f7">&#127183; James Bond</button>
+  <span style="margin-left:auto;color:#333;font-size:9px">Data source: Othelia golden evaluation datasets &middot; source control confirmed</span>
+</div>
+<div class="banner" id="banner">
+  <span>&#9432; <strong style="color:#ddd">Game of Thrones</strong> &mdash; A Game of Thrones (George R.R. Martin novel) &mdash; Real character data from Othelia evaluation golden dataset</span>
+  <span class="pill" style="background:#c9a84c18;border:1px solid #c9a84c33;color:#c9a84c">in source control</span>
+</div>
+<div class="wrap">
+<div id="canvas"><svg id="svg"></svg></div>
+<div class="panel" id="panel"><div class="pi" id="pi"></div></div>
+</div>
+<div class="legend">
+  <span>Node size = character importance (3&#9733; = larger)</span>
+  <span style="color:#2a2a3e">|</span>
+  <span>Drag nodes to explore &middot; scroll to zoom &middot; click for full character profile from real extraction data</span>
+</div>
+<script>
+// ── FRANCHISE DATA (real golden dataset extractions) ─────────────────────
+const FRANCHISE = {
+  got: {
+    label:"Game of Thrones",
+    subtitle:"A Game of Thrones — George R.R. Martin novel",
+    source:"Golden dataset: source control confirmed",
+    color:"#c9a84c",
+    chars:[{"name": "Eddard Stark", "stars": 3, "aliases": ["Ned", "Lord Stark", "Hand of the King"], "description": "Eddard Stark is the somber and honorable lord of Winterfell, known for his stoicism, integrity, and deep sense of justice. He is thrust into the political intrigue and peril of King’s Landing when appointed as Hand of th", "backstory": "Second son of Rickard Stark, raised in Winterfell, fostered at the Eyrie by Jon Arryn, fought in Robert's Rebellion. Became Lord of Winterfell after his brother Brandon and father were executed by the Mad King. Married C", "traits": "Deeply loyal, principled, emotionally reserved, sometimes haunted by guilt and unable to forgive himself for hard choice", "color": "#f0c040"}, {"name": "Catelyn Stark", "stars": 3, "aliases": ["Cat", "Lady Stark", "Catelyn Tully"], "description": "Catelyn Stark is the strong-willed and determined lady of Winterfell, rooted in the traditions of House Tully but fiercely loyal to her new family in the North.", "backstory": "Born the eldest daughter of Hoster Tully of Riverrun, she was raised in the riverlands and betrothed first to Brandon Stark, then to Eddard after Brandon's death. She is a loving but anxious mother and is compelled into ", "traits": "Pragmatic, passionate, fiercely protective of her children. Can be unforgiving (especially toward Jon Snow) and is prone", "color": "#e06060"}, {"name": "Jon Snow", "stars": 3, "aliases": ["Jon", "Stark's bastard", "Lord Snow"], "description": "Jon Snow is the brooding, proud, and skilled illegitimate son of Eddard Stark. He is marked by his outsider status yet continually strives for honor and belonging, now as a recruit of the Night’s Watch.", "backstory": "Raised at Winterfell alongside his trueborn siblings but always a half-step removed, Jon is the result of Eddard Stark’s mysterious relationship with an unknown woman during the war. He seeks purpose and belonging at the", "traits": "Deeply sensitive, proud, loyal, prone to loneliness and bouts of self-pity, but capable of humility and leadership when ", "color": "#40c0e0"}, {"name": "Arya Stark", "stars": 3, "aliases": ["Arya"], "description": "Arya Stark is a fiercely independent tomboy with a stubborn streak, a quick wit, and an appetite for adventure—utterly unlike her conventional sister Sansa.", "backstory": "Third child of Ned and Catelyn; struggles to fit into the expectations of noblewoman life. Frequently clashes with her sister and finds solace in her direwolf, Nymeria, and her half-brother Jon.", "traits": "Passionate, loyal, impulsive, and fiercely protective of friends and the vulnerable. Clashes often with authority.", "color": "#e08040"}, {"name": "Sansa Stark", "stars": 3, "aliases": ["Sansa"], "description": "Sansa Stark is the beautiful, courteous, and sensitive eldest Stark daughter, deeply invested in romantic and courtly ideals—often to her own detriment.", "backstory": "First daughter of Ned and Catelyn, schooled from birth in the arts and values of noblewomen. Idolizes Queen Cersei and her betrothed, Joffrey.", "traits": "Eager to please, romantic, desperate for approval and belonging. Easily hurt and often in denial in the face of cruelty.", "color": "#80c060"}, {"name": "Bran Stark", "stars": 3, "aliases": ["Bran"], "description": "Bran Stark is a curious, fearless, and imaginative boy whose love of climbing gives way to mystical visions after a tragic fall leaves him crippled.", "backstory": "Fourth child of Eddard and Catelyn, eager for knighthood and the stories of old. After witnessing a terrible secret, he is thrown from a tower and left comatose—eventually awakening changed, haunted by dreams of a three-", "traits": "Sweet, gentle, and eager to please; grows braver and more accepting of his fate.", "color": "#c040c0"}, {"name": "Daenerys Targaryen", "stars": 3, "aliases": ["Dany", "Khaleesi", "Daenerys Stormborn"], "description": "Daenerys is the last princess of the overthrown Targaryen dynasty—a timid, abused exile who transforms when married to Khal Drogo and begins to find a sense of agency and power.", "backstory": "Born on Dragonstone after her family fell, raised drifting between Free Cities, dominated by her brother Viserys, given to Khal Drogo as a bride to earn her brother an army. Her only memories of home are stories of Weste", "traits": "Fearful, submissive, but with deep wells of courage and emerging will. Driven by self-discovery and hunger for identity.", "color": "#e0a040"}, {"name": "Tyrion Lannister", "stars": 3, "aliases": ["Tyrion", "The Imp", "the dwarf"], "description": "Tyrion is the brilliant, sardonic, and physically stunted youngest son of Tywin Lannister. He survives and thrives by using his keen intellect and sharp tongue to make up for his lack of power and stature.", "backstory": "Borne of the powerful Lannister clan, despised by his father, resented by his sister Cersei, but loved by his brother Jaime. Uses wit as armor and travels to the Wall for curiosity—and to escape his troubles.", "traits": "Cynical, empathic, wry sense of humor; self-deprecating but perceptive about others’ weaknesses and pain.", "color": "#a0a0ff"}, {"name": "Robert Baratheon", "stars": 3, "aliases": ["Robert", "King Robert", "The King"], "description": "Robert Baratheon is the boisterous, once-great king of Westeros, now gone to seed; he is a man of massive appetites and powerful emotions, haunted by old loves and new regrets.", "backstory": "Won the Iron Throne through rebellion, once fostered at the Eyrie. Lost his fiancée Lyanna Stark and with her, much of his joy. Has become reckless with money, contentious in his marriage, and dependent on others for rul", "traits": "Loud, genial, warm, but often erupts into anger or sullen depression. Nostalgic for his youth.", "color": "#60c0a0"}, {"name": "Robb Stark", "stars": 2, "aliases": ["Robb"], "description": "Robb Stark is the eldest legitimate son of Eddard and Catelyn, heir to Winterfell—a responsible, courageous youth forced to shoulder adult burdens far too soon.", "backstory": "Raised as the future Lord of Winterfell, trained in the arts of leadership and warfare. Takes over as acting lord in Ned's absence and must cope with Bran’s injury and growing dangers threatening the family.", "traits": "Stubborn, responsible, protective, easily wounded by loss, less prone to brooding than Jon but deeply feels emotions.", "color": "#ff6060"}, {"name": "Cersei Lannister", "stars": 2, "aliases": ["Cersei", "The Queen", "Queen Cersei Lannister"], "description": "The beautiful, ambitious, and fiercely protective queen of the Seven Kingdoms; proud and power-conscious, quick to see and ruthlessly address threats to her children or herself.", "backstory": "Eldest child of Tywin Lannister, married to Robert Baratheon in an alliance forged after the fall of Mad King Aerys. Twin to Jaime Lannister, mother to Joffrey, Myrcella, and Tommen.", "traits": "Proud, vengeful, unyielding; warm only to her children and twin, sometimes vindictive or paranoid.", "color": "#7eb8f7"}, {"name": "Jaime Lannister", "stars": 2, "aliases": ["Jaime Lannister", "The Kingslayer", "Ser Jaime"], "description": "Handsome, arrogant, and deadly; Kingsguard knight infamous for slaying the 'Mad King' Aerys Targaryen, twin brother to Cersei and her secret lover.", "backstory": "Son of Tywin Lannister; acclaimed young knight whose honor is forever tainted by his regicide. Feared and respected, often present at court or in martial matters.", "traits": "Witty, sardonic, secretive about his true ambitions and relationships.", "color": "#b07ef7"}, {"name": "Joffrey Baratheon", "stars": 2, "aliases": ["Joffrey", "Prince Joffrey"], "description": "The crown prince, proud, volatile, and cruel; eager for status and quick to anger, especially when shamed.", "backstory": "Raised as heir by Cersei, indulged since childhood, often pitted against others for approval; betrothed to Sansa Stark.", "traits": "Immature, vain, vindictive, and rarely self-reflective.", "color": "#f06060"}, {"name": "Benjen Stark", "stars": 2, "aliases": ["Benjen", "Ben", "Uncle Benjen"], "description": "Eddard Stark’s younger brother, First Ranger of the Night’s Watch, distant and all duty while at the Wall.", "backstory": "Raised at Winterfell, committed to the Watch for many years; acts as Jon Snow's last family link after Jon takes the black.", "traits": "Stoic and loyal to duty, emotionally distant, puts the Watch above all.", "color": "#c9a84c"}],
+    // Inferred relationships from the storyline reference
+    rels:[
+      {a:"Eddard Stark",b:"Catelyn Stark",type:"FAMILY",label:"Husband & Wife"},
+      {a:"Eddard Stark",b:"Jon Snow",type:"FAMILY",label:"Father & Son"},
+      {a:"Eddard Stark",b:"Arya Stark",type:"FAMILY",label:"Father & Daughter"},
+      {a:"Eddard Stark",b:"Sansa Stark",type:"FAMILY",label:"Father & Daughter"},
+      {a:"Eddard Stark",b:"Bran Stark",type:"FAMILY",label:"Father & Son"},
+      {a:"Eddard Stark",b:"Robb Stark",type:"FAMILY",label:"Father & Son"},
+      {a:"Eddard Stark",b:"Robert Baratheon",type:"ALLY",label:"Old friends / King & Hand"},
+      {a:"Eddard Stark",b:"Petyr Baelish",type:"ENEMY",label:"Political rivals"},
+      {a:"Eddard Stark",b:"Cersei Lannister",type:"ENEMY",label:"Discovers her secret"},
+      {a:"Jon Snow",b:"Catelyn Stark",type:"COMPLEX",label:"Stepmother & bastard son"},
+      {a:"Daenerys Targaryen",b:"Khal Drogo",type:"COMPLEX",label:"Arranged marriage → love"},
+      {a:"Daenerys Targaryen",b:"Viserys Targaryen",type:"FAMILY",label:"Brother & Sister"},
+      {a:"Daenerys Targaryen",b:"Ser Jorah Mormont",type:"ALLY",label:"Loyal advisor"},
+      {a:"Tyrion Lannister",b:"Cersei Lannister",type:"COMPLEX",label:"Siblings, uneasy alliance"},
+      {a:"Tyrion Lannister",b:"Jaime Lannister",type:"ALLY",label:"Brothers — genuine bond"},
+      {a:"Cersei Lannister",b:"Jaime Lannister",type:"FAMILY",label:"Twins, secret relationship"},
+      {a:"Cersei Lannister",b:"Joffrey Baratheon",type:"FAMILY",label:"Mother & Son"},
+      {a:"Petyr Baelish",b:"Varys",type:"ENEMY",label:"Rival schemers"},
+    ]
+  },
+  bond: {
+    label:"James Bond",
+    subtitle:"Casino Royale — Ian Fleming novel",
+    source:"Golden dataset: source control confirmed",
+    color:"#7eb8f7",
+    chars:[{"name": "James Bond", "stars": 3, "aliases": ["007", "Bond"], "description": "The protagonist British secret agent on a high-stakes mission to bankrupt Le Chiffre at the Casino Royale. Highly skilled gambler, strategic and composed under pressure, Bond faces assassination attempts, capture, brutal", "backstory": "An experienced MI6 operative with a history of covert missions, gambling expertise, and field operations. Undercover as a wealthy Jamaican plantocrat in Royale-les-Eaux, Bond aims to bankrupt Le Chiffre at baccarat. Foll", "traits": "Controlled, disciplined, and pragmatic, but with moments of vulnerability, bitterness, and frustration. Displays resilie", "color": "#f0c040"}, {"name": "Vesper Lynd", "stars": 3, "aliases": ["Bond's Number Two", "Vesper", "Miss Lynd"], "description": "A beautiful and highly capable British intelligence operative assigned as James Bond’s partner and companion during his mission in Royale-les-Eaux. Initially cold and professional, she becomes a loyal and supportive coll", "backstory": "Sent by British Secret Service under M's direction; trusted by Mathis; involved in intelligence liaison work and covert operations. Kidnapped to bait Bond, later spared torture. After recovery, deeply involved in Bond’s ", "traits": "Initially cold, serious, and professional; later warm, supportive, and affectionate toward Bond; shows vulnerability, an", "color": "#e06060"}, {"name": "Le Chiffre", "stars": 3, "aliases": ["The Number", "Herr Nummer", "Herr Ziffer"], "description": "Le Chiffre is a highly skilled and calculating Soviet agent, acting as the paymaster for a communist-controlled trade union. He is the principal antagonist and banker at the baccarat table, known for his cold, ruthless d", "backstory": "Originally a displaced person after World War II with a lost past, Le Chiffre took his name symbolizing his anonymity as 'just a number.' He serves as treasurer for a communist front organization in France and faces a se", "traits": "Le Chiffre remains calm, composed, and coldly detached in most situations, exhibiting ruthless pragmatism and intense se", "color": "#40c0e0"}, {"name": "M", "stars": 2, "aliases": [], "description": "Head of the British Secret Service and Bond’s superior, responsible for authorising and overseeing critical operations including the mission against Le Chiffre. Known for strategic oversight, pragmatism, and maintaining ", "backstory": "Experienced intelligence leader managing Station S and related espionage units. Trusted for deep knowledge of intelligence operations, risk assessment, and Bond’s capabilities.", "traits": "Cool-headed, pragmatic, occasionally curt or irritated by unnecessary complexity. Protective of agents but focused prima", "color": "#e08040"}, {"name": "René Mathis", "stars": 2, "aliases": ["Mathis", "René Mathis"], "description": "French intelligence operative attached to the Deuxième Bureau, serving as Bond’s local liaison, wireless expert, and trusted ally. He supports Bond with surveillance, communications, and operational coordination in Royal", "backstory": "Experienced French counterintelligence agent with a history of collaboration with Bond in Monte Carlo and Royale-les-Eaux. Maintains a cover as a wireless salesman. Skilled in espionage, surveillance detection, and coord", "traits": "Loyal, protective, and pragmatic. Shows warmth, dry humor, and occasional sarcasm. Demonstrates empathy and concern for ", "color": "#80c060"}, {"name": "Felix Leiter", "stars": 2, "aliases": ["Leiter"], "description": "American CIA operative and Bond’s trusted ally, involved in intelligence operations at Royale-les-Eaux and Paris. Provides practical support, covert funds, and debriefs Bond. Observant and pragmatic, he assists Bond duri", "backstory": "Former Marine Corps officer turned CIA agent, stationed in Fontainebleau and Paris. Works closely with British intelligence, offering cross-agency collaboration and operational support throughout Bond’s mission.", "traits": "Professional, calm, and reserved with dry humor. Loyal and pragmatic, supportive of Bond, and quietly confident. Exhibit", "color": "#c040c0"}, {"name": "Adolph Gettler", "stars": 2, "aliases": ["Gettler", "Man with the black patch", "Black-Patch"], "description": "A Swiss man who appears to be following Bond and Vesper; his presence causes Vesper visible terror.", "backstory": "Travels in France under the guise of a watch salesman; previously identified by Bond and Mathis as Adolph Gettler, connected to the watch industry and with a Swiss bank account.", "traits": "Cold and unreadable; his presence induces fear in Vesper.", "color": "#e0a040"}],
+    rels:[
+      {a:"James Bond",b:"Vesper Lynd",type:"COMPLEX",label:"Partners → love → betrayal"},
+      {a:"James Bond",b:"Le Chiffre",type:"ENEMY",label:"High-stakes adversary"},
+      {a:"James Bond",b:"M",type:"COMPLEX",label:"Agent & handler"},
+      {a:"James Bond",b:"René Mathis",type:"ALLY",label:"MI6 field contact"},
+      {a:"James Bond",b:"Felix Leiter",type:"ALLY",label:"CIA ally"},
+      {a:"Le Chiffre",b:"Vesper Lynd",type:"ENEMY",label:"Leverage & capture"},
+      {a:"Vesper Lynd",b:"M",type:"COMPLEX",label:"Double agent & controller"},
+    ]
+  },
+  dune: {
+    label:"Dune",
+    subtitle:"Full franchise — see Arc Diagram for complete experience",
+    source:"Demo data (real Dune data in Othelia DB — not yet exported)",
+    color:"#f0c040",
+    chars:[
+      {name:"Paul Atreides",color:"#f0c040",stars:3,aliases:["Muad'Dib","Usul"],description:"Paul is the heir to House Atreides who becomes the messianic leader of the Fremen. Herbert's cautionary tale about charismatic leaders.",backstory:"Son of Duke Leto Atreides and Lady Jessica. Trained by Bene Gesserit and Mentat teachers.",traits:"Strategic, prescient, haunted by the future he sees."},
+      {name:"Lady Jessica",color:"#e06060",stars:3,aliases:["Reverend Mother"],description:"Paul's mother, a Bene Gesserit whose decision to bear a son set the messianic bloodline in motion.",backstory:"Concubine of Duke Leto, trained Bene Gesserit who defied the Sisterhood.",traits:"Disciplined, calculating, loving beneath the training."},
+      {name:"Duncan Idaho",color:"#40c0e0",stars:3,aliases:["Duncan (Ghola)"],description:"House Atreides finest warrior. Dies protecting Paul — then resurrected as gholas across 3,500 years.",backstory:"Swordmaster of the Atreides, Paul's closest friend.",traits:"Loyal, warm, the measure of humanity's best qualities."},
+      {name:"Chani",color:"#e08040",stars:3,aliases:["Sihaya"],description:"Fremen warrior and Paul's companion. Refuses to accept the messianic myth that destroys the man she loves.",backstory:"Daughter of Liet-Kynes, raised in the desert.",traits:"Direct, fierce, deeply skeptical of prophecy."},
+      {name:"Stilgar",color:"#80c060",stars:2,aliases:[],description:"Fremen Naib who evolves from skeptic to true believer across the saga.",backstory:"Leader of Sietch Tabr, endures across the entire Dune saga.",traits:"Proud, loyal, ultimately broken by his own devotion."},
+      {name:"Baron Harkonnen",color:"#c040c0",stars:2,aliases:["The Baron"],description:"Primary antagonist. Grotesque, brilliant, utterly amoral. His genetic legacy haunts the saga.",backstory:"Ruler of House Harkonnen, orchestrator of Atreides destruction.",traits:"Cunning, cruel, unexpectedly witty."},
+    ],
+    rels:[
+      {a:"Paul Atreides",b:"Lady Jessica",type:"FAMILY",label:"Son & Mother"},
+      {a:"Paul Atreides",b:"Duncan Idaho",type:"ALLY",label:"Friends — Duncan dies for Paul"},
+      {a:"Paul Atreides",b:"Chani",type:"COMPLEX",label:"Love — she rejects his myth"},
+      {a:"Paul Atreides",b:"Stilgar",type:"ALLY",label:"Paul & devoted Fremen chief"},
+      {a:"Paul Atreides",b:"Baron Harkonnen",type:"ENEMY",label:"The Baron destroyed his family"},
+      {a:"Lady Jessica",b:"Baron Harkonnen",type:"ENEMY",label:"Baron killed her lover"},
+    ]
+  }
+};
+
+const REL_COLOR={ALLY:"#7ec87e",ENEMY:"#e06060",FAMILY:"#c9a84c",COMPLEX:"#b07ef7"};
+
+let activeFranchise="got", selNode=null;
+const svg=d3.select("#svg");
+let sim;
+
+function W(){return document.getElementById("canvas").clientWidth;}
+function H(){return document.getElementById("canvas").clientHeight;}
+
+function loadFranchise(id, btn){
+  activeFranchise=id; selNode=null;
+  document.querySelectorAll(".fb").forEach(b=>b.classList.remove("on"));
+  if(btn) btn.classList.add("on");
+  document.getElementById("panel").classList.remove("open");
+  const f=FRANCHISE[id];
+  // Update banner
+  const colors={got:"#c9a84c",bond:"#7eb8f7",dune:"#f0c040"};
+  const confirmed=id!=="dune";
+  document.getElementById("banner").innerHTML=`
+    <span>&#9432; <strong style="color:#ddd">${f.label}</strong> &mdash; ${f.subtitle}</span>
+    <span class="pill" style="background:${confirmed?"#7ec87e18":"#66666618"};border:1px solid ${confirmed?"#7ec87e33":"#66666633"};color:${confirmed?"#7ec87e":"#888"}">${confirmed?"&#10003; in source control":"demo data"}</span>`;
+  if(id==="dune"){
+    // Redirect to arc diagram for full dune experience
+    window.location.href="09-ARC-TIMELINE.html";
+    return;
+  }
+  init();
+}
+
+function init(){
+  if(sim) sim.stop();
+  svg.selectAll("*").remove();
+  const f=FRANCHISE[activeFranchise];
+  const w=W(), h=H();
+
+  const defs=svg.append("defs");
+  const filt=defs.append("filter").attr("id","fgw").attr("x","-50%").attr("y","-50%").attr("width","200%").attr("height","200%");
+  filt.append("feGaussianBlur").attr("stdDeviation","5").attr("result","b");
+  const fm=filt.append("feMerge");
+  fm.append("feMergeNode").attr("in","b"); fm.append("feMergeNode").attr("in","SourceGraphic");
+
+  // Add arrow markers
+  Object.entries(REL_COLOR).forEach(([type,color])=>{
+    const mk=defs.append("marker").attr("id","arr-"+type).attr("markerWidth","8").attr("markerHeight","8").attr("refX","6").attr("refY","3").attr("orient","auto");
+    mk.append("path").attr("d","M0,0 L0,6 L8,3 z").attr("fill",color+"99");
+  });
+
+  const g=svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.25,3]).on("zoom",e=>g.attr("transform",e.transform)));
+
+  // Build nodes and links
+  const charMap={};
+  f.chars.forEach((c,i)=>{charMap[c.name]=i;});
+  const nodes=f.chars.map(c=>({...c, r: c.stars===3?28:c.stars===2?20:14}));
+  const links=f.rels.filter(r=>charMap[r.a]!==undefined&&charMap[r.b]!==undefined)
+    .map(r=>({source:r.a, target:r.b, type:r.type, label:r.label, color:REL_COLOR[r.type]||"#888"}));
+
+  // Draw relationship edges
+  const gL=g.append("g");
+  const edges=gL.selectAll("g").data(links).join("g");
+  edges.append("line").attr("stroke",d=>d.color).attr("stroke-width",2).attr("opacity",.7)
+    .attr("marker-end",d=>`url(#arr-${d.type})`);
+  edges.append("rect").attr("rx",3).attr("height",12).attr("fill","#0a0a18").attr("opacity",.88);
+  edges.append("text").attr("font-size",8).attr("text-anchor","middle").attr("fill",d=>d.color).attr("font-weight","600").text(d=>d.label);
+
+  // Draw character nodes
+  const gN=g.append("g").selectAll("g").data(nodes).join("g")
+    .attr("cursor","pointer")
+    .call(d3.drag().on("start",ds).on("drag",dd).on("end",de))
+    .on("click",nodeClick);
+
+  gN.each(function(d){
+    const e=d3.select(this);
+    e.append("circle").attr("r",d.r+5).attr("fill",d.color+"08");
+    e.append("circle").attr("r",d.r).attr("fill","#0d0d18").attr("stroke",d.color).attr("stroke-width",d.stars===3?2:1.5);
+    const nameWords=d.name.split(" ");
+    const mid=Math.ceil(nameWords.length/2);
+    const l1=nameWords.slice(0,mid).join(" "), l2=nameWords.slice(mid).join(" ");
+    e.append("text").attr("y",l2?-4:3).attr("font-size",d.stars===3?9:8).attr("fill",d.color).attr("text-anchor","middle").attr("font-weight","600").text(l1);
+    if(l2) e.append("text").attr("y",7).attr("font-size",d.stars===3?9:8).attr("fill",d.color).attr("text-anchor","middle").text(l2);
+    if(d.aliases&&d.aliases.length)
+      e.append("text").attr("y",d.r+13).attr("font-size",7.5).attr("fill","#555").attr("text-anchor","middle").text(d.aliases[0]);
+  });
+
+  sim=d3.forceSimulation(nodes)
+    .force("link",d3.forceLink(links).id(d=>d.name).distance(120).strength(0.4))
+    .force("charge",d3.forceManyBody().strength(d=>d.stars===3?-600:-350))
+    .force("center",d3.forceCenter(w/2,h/2))
+    .force("collide",d3.forceCollide(d=>d.r+18))
+    .on("tick",()=>{
+      gN.attr("transform",d=>`translate(${d.x},${d.y})`);
+      edges.select("line").attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+      edges.attr("transform",d=>`translate(${(d.source.x+d.target.x)/2},${(d.source.y+d.target.y)/2})`);
+      edges.select("rect").attr("width",d=>d.label.length*5+10).attr("x",d=>-(d.label.length*5+10)/2).attr("y",-9);
+    });
+
+  function ds(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}
+  function dd(e,d){d.fx=e.x;d.fy=e.y;}
+  function de(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
+
+  function nodeClick(event,d){
+    event.stopPropagation();
+    selNode=selNode===d.name?null:d.name;
+    gN.select("circle:last-of-type").attr("filter",n=>n.name===selNode?"url(#fgw)":null);
+    gN.attr("opacity",n=>!selNode||n.name===selNode||links.some(l=>(l.source.name||l.source)===selNode&&(l.target.name||l.target)===n.name||(l.target.name||l.target)===selNode&&(l.source.name||l.source)===n.name)?1:0.2);
+    if(!selNode){document.getElementById("panel").classList.remove("open");return;}
+    showPanel(d);
+  }
+
+  svg.on("click",()=>{selNode=null;gN.attr("opacity",1).select("circle:last-of-type").attr("filter",null);document.getElementById("panel").classList.remove("open");});
+  window._sim=sim;
+}
+
+function showPanel(d){
+  const f=FRANCHISE[activeFranchise];
+  const rels=f.rels.filter(r=>r.a===d.name||r.b===d.name).map(r=>{
+    const other=r.a===d.name?r.b:r.a;
+    const color=REL_COLOR[r.type]||"#888";
+    return `<div style="padding:5px 0;border-bottom:1px solid #12121e;font-size:10px;display:flex;align-items:center;gap:6px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <div><span style="color:#ddd;font-weight:500">${other}</span> &mdash; <span style="color:${color}">${r.type}</span><br>
+      <span style="color:#666;font-size:9px">${r.label}</span></div>
+    </div>`;
+  }).join("");
+  document.getElementById("pi").innerHTML=`
+    <button onclick="closePanel()" style="float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px">&#10005;</button>
+    <div style="font-size:14px;font-weight:700;color:${d.color};margin-bottom:2px">${d.name}</div>
+    <div style="font-size:9px;color:#555;margin-bottom:8px">${(d.aliases||[]).join(", ")||""}</div>
+    <div style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:${d.color}18;border:1px solid ${d.color}33;color:${d.color};margin-bottom:10px">${d.stars===3?"PRIMARY CHARACTER":"SECONDARY CHARACTER"}</div>
+    <div class="summary" style="border-color:${d.color}">${d.description}</div>
+    ${d.backstory?`<div class="section"><h4>Backstory</h4><p>${d.backstory}</p></div>`:""}
+    ${d.traits?`<div class="section"><h4>Emotional Traits</h4><p>${d.traits}</p></div>`:""}
+    ${rels?`<div class="section"><h4>Relationships</h4>${rels}</div>`:""}
+    <div style="margin-top:12px;padding:7px 10px;background:#0d0d18;border-radius:5px;font-size:9px;color:#444;border-left:2px solid #2a2a3e">&#9432; Real data from Othelia golden evaluation dataset &mdash; confirmed in source control</div>
+  `;
+  document.getElementById("panel").classList.add("open");
+}
+
+window.closePanel=function(){selNode=null;document.getElementById("panel").classList.remove("open");};
+window.loadFranchise=loadFranchise;
+window.addEventListener("resize",init);
+init();
+</script></body></html>

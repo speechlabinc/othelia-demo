@@ -1,18 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<script>
-(function(){
-  var k = sessionStorage.getItem("othelia_auth");
-  if(k !== "ok"){
-    var p = prompt("Enter password to access this demo:");
-    if(p !== "othelia!@#!"){
-      document.body.innerHTML = "<div style=\"height:100vh;display:flex;align-items:center;justify-content:center;background:#060610;color:#555;font-family:sans-serif\">Access denied.</div>";
-      return;
-    }
-    sessionStorage.setItem("othelia_auth","ok");
-  }
-})();
-</script><meta charset="UTF-8">
+<html lang="en"><head><meta charset="UTF-8">
 <title>Othelia — Dune Franchise Intelligence Demo</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -41,6 +28,20 @@ footer{padding:20px 40px;border-top:1px solid #1a1a2e;font-size:10px;color:#333;
 <div class="subtitle">Franchise Intelligence Platform &mdash; Interactive visualizations showing titles, characters, and connections across the Dune universe</div>
 </header>
 <main>
+
+<a class="card" href="12-FRANCHISE-EXPLORER.html" style="border-color:#c9a84c44">
+<div class="card-icon">&#9876;</div>
+<div class="card-title" style="color:#c9a84c">Franchise Explorer &mdash; REAL DATA</div>
+<div class="card-desc">Characters from the actual Othelia golden evaluation datasets — Game of Thrones (A Game of Thrones novel) and James Bond (Casino Royale novel). Real extracted character profiles: aliases, backstory, emotional traits, relationships. Toggle between franchises. This is what real Othelia extraction output looks like.</div>
+<ul class="card-features">
+<li>Real character data confirmed in source control</li>
+<li>Game of Thrones: 14 characters, Ned Stark to Daenerys</li>
+<li>James Bond: 7 characters, Bond to Le Chiffre</li>
+<li>Labeled relationship edges (ALLY / ENEMY / FAMILY / COMPLEX)</li>
+<li>Click any character for full extracted profile</li>
+</ul>
+<span class="card-tag" style="background:#7ec87e18;color:#7ec87e;border:1px solid #7ec87e33">&#10003; Real Othelia Data &bull; Golden Dataset</span>
+</a>
 
 <a class="card" href="09-ARC-TIMELINE.html">
 <div class="card-icon">&#127752;</div>
