@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Network Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:12px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+.hint{font-size:11px;color:#444;margin-left:8px}
+.btns{display:flex;gap:6px;margin-left:auto}
+.btn{padding:4px 12px;border-radius:16px;border:1px solid #2a2a3e;background:transparent;color:#666;font-size:11px;cursor:pointer;transition:all .15s}
+.btn:hover,.btn.on{background:#c9a84c18;border-color:#c9a84c88;color:#c9a84c}
+#canvas{flex:1;position:relative;min-height:500px}
+svg{width:100%;height:100%}
+.node{cursor:pointer}
+.char-link{fill:none;stroke-width:1.5;opacity:.25;transition:opacity .2s}
+.panel{position:absolute;top:16px;right:16px;width:260px;background:#0d0d1a;border:1px solid #1e1e2e;border-radius:10px;padding:16px;display:none}
+.panel.show{display:block}
+.ph2{font-size:14px;color:#c9a84c;margin-bottom:4px}
+.pmeta{font-size:10px;color:#555;margin-bottom:10px}
+.pitem{padding:5px 0;border-bottom:1px solid #12121e;font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.pitem:hover{color:#c9a84c}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.legend{padding:8px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:14px;font-size:10px;color:#555;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:4px}
+a.back{font-size:11px;color:#555;text-decoration:underline;cursor:pointer}
+a.back:hover{color:#c9a84c}
+</style></head><body>
+<header>
+<div class="logo">&#x2B21; FORCE GRAPH</div>
+<div class="hint">Titles and Characters — drag nodes, click to highlight connections</div>
+<div class="btns">
+<button class="btn on" onclick="setMode('both',this)">Titles + Characters</button>
+<button class="btn" onclick="setMode('chars',this)">Characters Only</button>
+<button class="btn" onclick="setMode('titles',this)">Titles Only</button>
+</div>
+<a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back to Demo</a>
+</header>
+<div style="padding:7px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;align-items:center;gap:10px;flex-shrink:0">
+  <span>&#9432; Enabled by:</span>
+  <span style="padding:2px 7px;border-radius:10px;background:#7eb8f718;border:1px solid #7eb8f733;color:#7eb8f7;font-size:9px;font-weight:600">FranchiseTitle</span>
+  <span style="padding:2px 7px;border-radius:10px;background:#f0c04018;border:1px solid #f0c04033;color:#f0c040;font-size:9px;font-weight:600">CanonicalCharacter</span>
+  <span style="padding:2px 7px;border-radius:10px;background:#80c06018;border:1px solid #80c06033;color:#80c060;font-size:9px;font-weight:600">CharacterAppearance</span>
+  <span style="padding:2px 7px;border-radius:10px;background:#b07ef718;border:1px solid #b07ef733;color:#b07ef7;font-size:9px;font-weight:600">TitleLink</span>
+  <span style="color:#2a2a3e">&mdash;</span>
+  <span>Current schema has no Franchise or CanonicalCharacter models. Adding them makes this network possible.</span>
+</div>
+<div id="canvas"><svg id="svg"></svg></div>
+<div class="panel" id="panel"></div>
+<div class="legend">
+<div class="li"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#1a3a1a" stroke="#7ec87e"/></svg>Novel</div>
+<div class="li"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#1a2a4a" stroke="#7eb8f7"/></svg>Film</div>
+<div class="li"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#2a1a4a" stroke="#b07ef7"/></svg>TV</div>
+<div class="li" style="margin-left:12px">Character nodes pull toward their titles. Clusters = shared cast.</div>
+</div>
+<script>
+
+const CHARS = [
+  {id:"paul",   name:"Paul Atreides",    color:"#f0c040"},
+  {id:"jessica",name:"Lady Jessica",     color:"#e06060"},
+  {id:"duncan", name:"Duncan Idaho",     color:"#40c0e0"},
+  {id:"chani",  name:"Chani",            color:"#e08040"},
+  {id:"stilgar",name:"Stilgar",          color:"#80c060"},
+  {id:"baron",  name:"Baron Harkonnen",  color:"#c040c0"},
+  {id:"alia",   name:"Alia Atreides",    color:"#e0a040"},
+  {id:"leto2",  name:"Leto II",          color:"#a0a0ff"},
+  {id:"gurney", name:"Gurney Halleck",   color:"#60c0a0"},
+  {id:"feyd",   name:"Feyd-Rautha",      color:"#ff6060"},
+];
+const TITLES = [
+  {id:"dn",  name:"Dune (Novel)",    year:1965,type:"novel",canon:"hard",chars:["paul","jessica","duncan","stilgar","chani","baron","gurney"],
+   synopsis:"Paul arrives on Arrakis, survives betrayal, joins Fremen."},
+  {id:"dm",  name:"Dune Messiah",    year:1969,type:"novel",canon:"hard",chars:["paul","chani","alia","stilgar","duncan"],
+   synopsis:"Emperor Paul faces the cost of the Jihad."},
+  {id:"codb",name:"Children of Dune",year:1976,type:"novel",canon:"hard",chars:["alia","leto2","stilgar","duncan"],
+   synopsis:"Alia falls. Leto II chooses the Golden Path."},
+  {id:"ge",  name:"God Emperor",     year:1981,type:"novel",canon:"hard",chars:["leto2","duncan"],
+   synopsis:"3500 years later — Leto II rules as god-worm."},
+  {id:"df84",name:"Dune (1984)",     year:1984,type:"film", canon:"soft",chars:["paul","jessica","duncan","stilgar","chani","baron","gurney"],
+   synopsis:"Lynch adapts Herbert — surreal and operatic."},
+  {id:"dt00",name:"Dune (TV 2000)",  year:2000,type:"tv",  canon:"soft",chars:["paul","jessica","duncan","stilgar","chani","baron","gurney"],
+   synopsis:"Faithful TV miniseries adaptation."},
+  {id:"cod3",name:"Children (TV)",   year:2003,type:"tv",  canon:"soft",chars:["alia","leto2","stilgar","paul"],
+   synopsis:"TV covering Messiah and Children."},
+  {id:"dp1", name:"Dune: Part One",  year:2021,type:"film", canon:"hard",chars:["paul","jessica","duncan","stilgar","chani","baron","gurney"],
+   synopsis:"Paul arrives on Arrakis."},
+  {id:"dp2", name:"Dune: Part Two",  year:2024,type:"film", canon:"hard",chars:["paul","chani","stilgar","jessica","baron","gurney","alia","feyd"],
+   synopsis:"Paul becomes Muad'Dib, ignites the Jihad."},
+];
+const LINKS = [
+  {s:"dn",t:"dp1",type:"ADAPTATION"},{s:"dn",t:"dp2",type:"ADAPTATION"},
+  {s:"dn",t:"df84",type:"ADAPTATION"},{s:"dn",t:"dt00",type:"ADAPTATION"},
+  {s:"dp1",t:"dp2",type:"SEQUEL"},{s:"dn",t:"dm",type:"SEQUEL"},
+  {s:"dm",t:"codb",type:"SEQUEL"},{s:"codb",t:"ge",type:"SEQUEL"},
+  {s:"dt00",t:"cod3",type:"SEQUEL"},
+];
+const ARCS = {
+  paul:  {dn:"Orphaned heir",dm:"Emperor, haunted",dp1:"Journey begins",dp2:"Becomes Muad'Dib",df84:"Lynch hero",dt00:"TV hero",cod3:"The Preacher"},
+  jessica:{dn:"Concubine to R.Mother",dp1:"Bene Gesserit",dp2:"Embraces agenda",df84:"Novel arc",dt00:"Strong portrayal"},
+  duncan:{dn:"Dies protecting Paul",dm:"1st Ghola",codb:"2nd Ghola",ge:"1000th Ghola",df84:"Early sacrifice",dt00:"Commander",dp1:"First to die",dp2:"Sacrifices again"},
+  chani: {dn:"Fremen companion",dm:"Dies in childbirth",dp1:"Paul's visions",dp2:"Refuses messiah",df84:"Love interest",dt00:"Warrior prophet"},
+  stilgar:{dn:"Adopts Paul",dm:"Troubled elder",codb:"Torn loyalties",dp1:"Suspicious chief",dp2:"True believer",df84:"Warrior",dt00:"Fremen chief",cod3:"Elder statesman"},
+  baron: {dn:"Mastermind",dp1:"Orchestrates fall",dp2:"Dies by Alia",df84:"Grotesque villain",dt00:"Schemer"},
+  alia:  {dm:"Growing power",codb:"Falls to Baron",cod3:"Sympathetic descent",dp2:"Born pre-born"},
+  leto2: {codb:"Chooses Golden Path",ge:"God Emperor",cod3:"James McAvoy era"},
+  gurney:{dn:"Weapons master",dp1:"Instructor",dp2:"Rejoins Paul",df84:"Troubadour",dt00:"Troubadour"},
+  feyd:  {dp2:"Harkonnen champion"},
+};
+const TCOLOR = {novel:"#7ec87e",film:"#7eb8f7",tv:"#b07ef7"};
+const TBG    = {novel:"#1a3a1a",film:"#1a2a4a",tv:"#2a1a4a"};
+
+let activeId = null, mode = "both";
+const svg = d3.select("#svg");
+const W = () => document.getElementById("canvas").clientWidth;
+const H = () => document.getElementById("canvas").clientHeight;
+
+function buildGraph() {
+  const nodes = [], links = [];
+  TITLES.forEach(t => nodes.push({id:t.id,type:"title",tdata:t,r:32,group:t.type}));
+  if (mode !== "titles") {
+    CHARS.forEach(c => {
+      const count = TITLES.filter(t => t.chars.includes(c.id)).length;
+      if (count > 0) nodes.push({id:"c_"+c.id,type:"char",cdata:c,r:12+(count*1.5)});
+    });
+    TITLES.forEach(t => {
+      t.chars.forEach(cid => {
+        if (nodes.find(n => n.id === "c_"+cid))
+          links.push({source:t.id, target:"c_"+cid, cid, color:CHARS.find(c=>c.id===cid)?.color||"#888"});
+      });
+    });
+  }
+  if (mode !== "chars") {
+    LINKS.forEach(l => links.push({source:l.s, target:l.t, cid:null, color:"#ffffff10", dashed:true}));
+  }
+  return {nodes, links};
+}
+
+let sim, gLink, gNode;
+
+function init() {
+  svg.selectAll("*").remove();
+  const {nodes, links} = buildGraph();
+  const w = W(), h = H();
+  const defs = svg.append("defs");
+  const f = defs.append("filter").attr("id","glow").attr("x","-50%").attr("y","-50%").attr("width","200%").attr("height","200%");
+  f.append("feGaussianBlur").attr("stdDeviation","5").attr("result","blur");
+  const m = f.append("feMerge");
+  m.append("feMergeNode").attr("in","blur");
+  m.append("feMergeNode").attr("in","SourceGraphic");
+  const g = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.2,4]).on("zoom", e => g.attr("transform", e.transform)));
+
+  gLink = g.append("g").selectAll("line").data(links).join("line")
+    .attr("stroke", d => d.color)
+    .attr("stroke-width", d => d.dashed ? 1 : 1.5)
+    .attr("stroke-dasharray", d => d.dashed ? "4,6" : null)
+    .attr("opacity", d => d.dashed ? 0.4 : 0.25)
+    .attr("fill", "none");
+
+  gNode = g.append("g").selectAll("g").data(nodes).join("g")
+    .attr("cursor","pointer")
+    .call(d3.drag().on("start",ds).on("drag",dd).on("end",de))
+    .on("click", nodeClick);
+
+  gNode.filter(d => d.type === "title").each(function(d) {
+    const e = d3.select(this);
+    e.append("circle").attr("r", d.r+3).attr("fill","none")
+      .attr("stroke", d.tdata.canon==="hard" ? "#c9a84c" : "#445599")
+      .attr("stroke-width", 1.2)
+      .attr("stroke-dasharray", d.tdata.canon==="hard" ? null : "4,3")
+      .attr("opacity", 0.5);
+    e.append("circle").attr("r", d.r).attr("fill", TBG[d.tdata.type]).attr("stroke", TCOLOR[d.tdata.type]).attr("stroke-width",1.5);
+    const parts = d.tdata.name.split(" (");
+    e.append("text").attr("y", parts.length>1 ? -4 : 3).attr("font-size",9).attr("fill","#ddd").attr("text-anchor","middle").attr("font-weight","600").text(parts[0]);
+    if (parts.length > 1) e.append("text").attr("y",9).attr("font-size",8).attr("fill","#888").attr("text-anchor","middle").text("("+parts[1]);
+    e.append("text").attr("y", d.r+13).attr("font-size",8).attr("fill","#555").attr("text-anchor","middle").text(d.tdata.year);
+  });
+
+  gNode.filter(d => d.type === "char").each(function(d) {
+    const e = d3.select(this);
+    e.append("circle").attr("r", d.r+3).attr("fill", d.cdata.color+"12");
+    e.append("circle").attr("r", d.r).attr("fill","#0d0d18").attr("stroke", d.cdata.color).attr("stroke-width",1.5);
+    e.append("text").attr("y",3).attr("font-size",8).attr("fill",d.cdata.color).attr("text-anchor","middle").attr("font-weight","600")
+      .text(d.cdata.name.split(" ")[0]);
+  });
+
+  sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d=>d.id).distance(d => d.cid ? 90 : 160).strength(d => d.cid ? 0.4 : 0.15))
+    .force("charge", d3.forceManyBody().strength(d => d.type==="title" ? -700 : -300))
+    .force("center", d3.forceCenter(w/2, h/2))
+    .force("collide", d3.forceCollide(d => d.r+22))
+    .on("tick", () => {
+      gLink.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+      gNode.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+}
+
+function ds(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}
+function dd(e,d){d.fx=e.x;d.fy=e.y;}
+function de(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
+
+function nodeClick(event, d) {
+  event.stopPropagation();
+  activeId = activeId === d.id ? null : d.id;
+  updateHL();
+  if (!activeId) { document.getElementById("panel").classList.remove("show"); return; }
+  showPanel(d);
+}
+
+function updateHL() {
+  if (!activeId) {
+    gNode.attr("opacity",1).selectAll("circle").attr("filter",null);
+    return;
+  }
+  const connected = new Set([activeId]);
+  gLink.each(d => {
+    const s = typeof d.source==="object"?d.source.id:d.source;
+    const t = typeof d.target==="object"?d.target.id:d.target;
+    if (s===activeId||t===activeId){connected.add(s);connected.add(t);}
+  });
+  gNode.attr("opacity", d => connected.has(d.id) ? 1 : 0.1);
+  gNode.selectAll("circle:last-of-type").attr("filter", function() {
+    const d = d3.select(this.parentNode).datum();
+    return connected.has(d.id) ? "url(#glow)" : null;
+  });
+  gLink.attr("opacity", d => {
+    const s=typeof d.source==="object"?d.source.id:d.source;
+    const t=typeof d.target==="object"?d.target.id:d.target;
+    return (s===activeId||t===activeId) ? 0.9 : 0.02;
+  }).attr("stroke-width", d => {
+    const s=typeof d.source==="object"?d.source.id:d.source;
+    const t=typeof d.target==="object"?d.target.id:d.target;
+    return (s===activeId||t===activeId) ? 2.5 : 1;
+  });
+}
+
+function showPanel(d) {
+  const p = document.getElementById("panel");
+  p.classList.add("show");
+  if (d.type === "title") {
+    const t = d.tdata;
+    const chars = t.chars.map(cid => {
+      const c = CHARS.find(x=>x.id===cid);
+      return `<div class="pitem" onclick="clickChar('c_${cid}')"><div class="pdot" style="background:${c.color}"></div>${c.name}</div>`;
+    }).join("");
+    p.innerHTML = `<div class="ph2">${t.name}</div><div class="pmeta">${t.year} &middot; ${t.type} &middot; ${t.canon==="hard"?"Hard Canon":"Soft Canon"}</div><p style="font-size:11px;color:#888;line-height:1.5;margin-bottom:10px">${t.synopsis}</p><div style="font-size:9px;color:#444;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Cast &mdash; click to highlight</div>${chars}`;
+  } else {
+    const c = d.cdata;
+    const titles = TITLES.filter(t=>t.chars.includes(c.id)).sort((a,b)=>a.year-b.year);
+    const items = titles.map(t => {
+      const arc = (ARCS[c.id]||{})[t.id]||"";
+      return `<div class="pitem" onclick="clickTitle('${t.id}')"><div class="pdot" style="background:${TCOLOR[t.type]}"></div><div><div>${t.name}</div><div style="font-size:9px;color:#555">${arc}</div></div></div>`;
+    }).join("");
+    p.innerHTML = `<div class="ph2" style="color:${c.color}">${c.name}</div><div class="pmeta">${titles.length} titles in franchise</div>${items}`;
+  }
+}
+
+window.clickChar = function(id){activeId=id;updateHL();};
+window.clickTitle = function(id){activeId=id;updateHL();};
+window.setMode = function(m, btn){
+  mode=m;
+  document.querySelectorAll(".btn").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  activeId=null;
+  document.getElementById("panel").classList.remove("show");
+  init();
+};
+svg.on("click",()=>{activeId=null;updateHL();document.getElementById("panel").classList.remove("show");});
+window.addEventListener("resize", init);
+init();
+</script></body></html>

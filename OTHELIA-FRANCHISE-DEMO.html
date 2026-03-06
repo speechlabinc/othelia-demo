@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Dune Franchise Intelligence Demo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:24px 40px;border-bottom:1px solid #1a1a2e;background:#0a0a18}
+.logo{font-size:14px;font-weight:700;color:#c9a84c;letter-spacing:3px}
+.subtitle{font-size:12px;color:#444;margin-top:4px}
+main{flex:1;padding:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:1100px;margin:0 auto;width:100%}
+.card{background:#0d0d1a;border:1px solid #1e1e2e;border-radius:12px;padding:24px;cursor:pointer;transition:all .2s;text-decoration:none;display:block;color:inherit}
+.card:hover{border-color:#c9a84c44;transform:translateY(-3px);box-shadow:0 12px 40px #0008}
+.card-icon{font-size:32px;margin-bottom:14px}
+.card-title{font-size:16px;font-weight:700;margin-bottom:8px;color:#ddd}
+.card-desc{font-size:12px;color:#666;line-height:1.7;margin-bottom:16px}
+.card-features{list-style:none;font-size:11px;color:#555}
+.card-features li{padding:3px 0;display:flex;gap:6px;align-items:flex-start}
+.card-features li::before{content:"→";color:#c9a84c44;flex-shrink:0}
+.card-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:14px}
+.tag-d3{background:#1a2a4a;color:#7eb8f7;border:1px solid #7eb8f733}
+.tag-svg{background:#1a3a1a;color:#7ec87e;border:1px solid #7ec87e33}
+.tag-schema{background:#2a1a4a;color:#b07ef7;border:1px solid #b07ef733}
+footer{padding:20px 40px;border-top:1px solid #1a1a2e;font-size:10px;color:#333;text-align:center}
+.dune-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600;background:#2d2200;color:#c9a84c;border:1px solid #c9a84c33;margin-left:8px}
+</style></head><body>
+<header>
+<div class="logo">&#x2B21; OTHELIA <span class="dune-badge">DUNE FRANCHISE DEMO</span></div>
+<div class="subtitle">Franchise Intelligence Platform &mdash; Interactive visualizations showing titles, characters, and connections across the Dune universe</div>
+</header>
+<main>
+
+<a class="card" href="09-ARC-TIMELINE.html">
+<div class="card-icon">&#127752;</div>
+<div class="card-title">Arc Diagram &mdash; Character Threads</div>
+<div class="card-desc">Every character drawn as a colored arc connecting all the titles they appear in. Arc height shows story distance. See Duncan Idaho&apos;s arc span from Dune (1965) through God Emperor &mdash; 3,500 years of story time in one view.</div>
+<ul class="card-features">
+<li>Character arcs as bezier curves above a story timeline</li>
+<li>Arc height = story time between appearances</li>
+<li>Click any character to isolate their thread</li>
+<li>Color dots on each title show which characters appear</li>
+<li>Hover arcs for arc summary tooltips</li>
+</ul>
+<span class="card-tag tag-svg">Pure SVG &bull; No dependencies</span>
+</a>
+
+<a class="card" href="08-GRAPH-NETWORK.html">
+<div class="card-icon">&#128990;</div>
+<div class="card-title">Force Graph &mdash; Network of Connections</div>
+<div class="card-desc">D3 physics simulation. Title nodes and character nodes float freely in space. Characters gravitationally pull toward every title they appear in &mdash; natural clusters form around shared cast. Drag any node.</div>
+<ul class="card-features">
+<li>D3 force simulation &mdash; nodes float and cluster naturally</li>
+<li>Character nodes pull toward their titles</li>
+<li>Click any node to highlight all connections</li>
+<li>Three modes: All / Characters Only / Titles Only</li>
+<li>Zoom and drag the entire graph</li>
+</ul>
+<span class="card-tag tag-d3">D3 v7 &bull; Force Simulation</span>
+</a>
+
+<a class="card" href="07-DATA-STRUCTURE-DIAGRAM.html">
+<div class="card-icon">&#128668;</div>
+<div class="card-title">Data Structure &mdash; Schema Diagram</div>
+<div class="card-desc">The proposed database schema powering the franchise intelligence features. Click any model to see its full field list with types and relationships. Shows how Franchise, Title, Character, and Appearance models connect.</div>
+<ul class="card-features">
+<li>Visual ER diagram with all 7 new models</li>
+<li>Click any model for detailed field descriptions</li>
+<li>New fields highlighted (sourceId, canonTier, lastModifiedBy)</li>
+<li>Shows why PostgreSQL is sufficient &mdash; no graph DB needed</li>
+</ul>
+<span class="card-tag tag-schema">Architecture Reference</span>
+</a>
+
+</main>
+<footer>SpeechLab &mdash; Othelia Franchise Intelligence &mdash; Dune Demo Data &mdash; 2026</footer>
+</body></html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Arc Diagram</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+.hint{font-size:10px;color:#333;margin-left:4px}
+a.back{font-size:11px;color:#555;text-decoration:underline;margin-left:auto}
+a.back:hover{color:#c9a84c}
+.model-banner{padding:8px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.model-banner strong{color:#7ec87e}
+.model-pill{padding:2px 8px;border-radius:10px;background:#7ec87e18;border:1px solid #7ec87e33;color:#7ec87e;font-size:9px;font-weight:600}
+.wrap{flex:1;display:flex;overflow:hidden}
+#arc-svg{flex:1;min-width:0}
+.cpanel{width:190px;border-right:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;padding:10px 0;flex-shrink:0;order:-1}
+.cpanel h3{font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px;padding:0 10px 6px}
+.ch{display:flex;align-items:center;gap:7px;padding:6px 10px;cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.ch:hover,.ch.on{background:#ffffff05}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.cn{font-size:11px;font-weight:500}
+.cc{font-size:9px;color:#444;margin-top:1px}
+.story-panel{width:300px;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;flex-shrink:0;transition:width .2s}
+.story-panel.hide{width:0;overflow:hidden;border:none}
+.sp-inner{padding:16px;min-width:300px}
+.sp-name{font-size:15px;font-weight:700;margin-bottom:3px}
+.sp-aliases{font-size:9px;color:#555;margin-bottom:8px}
+.sp-summary{font-size:11px;color:#888;line-height:1.6;margin-bottom:14px;padding:10px;background:#12121e;border-radius:6px;border-left:3px solid}
+.sp-appearances h4{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#444;margin-bottom:8px}
+.appearance-card{padding:10px 12px;border-radius:6px;margin-bottom:8px;border-left:3px solid;background:#0d0d18;cursor:pointer;transition:filter .15s}
+.appearance-card:hover{filter:brightness(1.15)}
+.ac-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.ac-title{font-size:11px;font-weight:600;color:#ddd}
+.ac-year{font-size:9px;color:#555}
+.ac-phase{font-size:9px;margin-bottom:5px}
+.ac-headline{font-size:10px;font-weight:600;margin-bottom:4px}
+.ac-story{font-size:10px;color:#888;line-height:1.55}
+.tip{position:absolute;background:#0d0d1a;border:1px solid #2a2a3e;border-radius:6px;padding:8px 11px;font-size:10px;pointer-events:none;display:none;z-index:100;max-width:200px}
+.legend{padding:6px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:12px;font-size:9px;color:#444;align-items:center;flex-shrink:0;flex-wrap:wrap}
+</style></head>
+<body>
+<header>
+<div class="logo">&#x2B21; ARC DIAGRAM</div>
+<div class="hint">Character arcs across story time &middot; Click a character to read their story</div>
+<a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back</a>
+</header>
+<div class="model-banner">
+  <span>&#9432; Enabled by proposed data model:</span>
+  <span class="model-pill">CanonicalCharacter</span>
+  <span class="model-pill">CharacterAppearance.arcSummary</span>
+  <span class="model-pill">FranchiseTitle.storyOrder</span>
+  <span style="color:#333">Without these, characters exist only within individual Project tables — no cross-title arcs possible.</span>
+</div>
+<div class="wrap">
+<div class="cpanel">
+  <h3>Characters</h3>
+  <div id="clist"></div>
+</div>
+<svg id="arc-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+<div class="story-panel hide" id="story-panel">
+  <div class="sp-inner" id="sp-inner"></div>
+</div>
+</div>
+<div class="tip" id="tip"></div>
+<div class="legend">
+  <span>&#11044; Hard Canon node &nbsp; &#9675; Soft Canon node</span>
+  <span style="color:#2a2a3e">|</span>
+  <span>Arc height = story time between appearances</span>
+  <span style="color:#2a2a3e">|</span>
+  <span>Data: Published Dune novels + films + TV series (Herbert, Lynch, Harrison, Villeneuve)</span>
+</div>
+<div class="tip" id="tip2"></div>
+<script>
+
+const CHARS = [
+  {id:"paul",   name:"Paul Atreides",   color:"#f0c040", aliases:["Muad'Dib","Usul","The Preacher"],
+   summary:"Herbert's cautionary tale about charismatic leaders. Paul sees the future clearly enough to know the Jihad is coming — and chooses it anyway.",
+   arc:{
+     dp1:{phase:"Rise",    headline:"The Reluctant Heir",         story:"Arrives on Arrakis as heir to House Atreides. Witnesses his father's political gamble with the spice. Experiences prescient visions of a holy war fought in his name — visions he cannot stop. Survives the Harkonnen betrayal with his mother and takes his first steps into the desert."},
+     dp2:{phase:"Peak",    headline:"The Messiah Who Knew Better", story:"Fully embraces the Muad'Dib prophecy — despite knowing with prescient clarity it will ignite a Jihad killing billions. Rides the sandworm. Defeats Feyd-Rautha. Claims the imperial throne. Chani walks away. The holy war begins and Paul cannot un-choose it."},
+     dn: {phase:"Rise",    headline:"The Complete Novel Arc",      story:"Herbert's original Paul covers both films across 600 pages. The novel makes his internal conflict explicit — he knows the Jihad is coming and feels guilty about the deaths already accumulating in his name before the story ends."},
+     dm: {phase:"Fall",    headline:"The Haunted Emperor",         story:"Twelve years on the throne. The Jihad has killed 61 billion people across the universe. Paul is physically blind but still sees through prescience. He abdicates, walks into the desert as a blind man, and becomes The Preacher — a wandering critic of the religion built in his own name."},
+     df84:{phase:"Rise",   headline:"Lynch's Triumphant Hero",     story:"David Lynch's Paul is more overtly heroic than Herbert intended. He wins decisively at the end — which Herbert publicly disliked. Lynch's vision is operatic where Herbert's was tragic."},
+     dt00:{phase:"Rise",   headline:"Most Faithful Adaptation",    story:"The 2000 miniseries covers Paul's complete arc over 4+ hours, staying closer to the novel than any film. His internal monologue and moral uncertainty are preserved."},
+     cod3:{phase:"Fall",   headline:"The Preacher Returns",        story:"Appears briefly as the blind Preacher — a wandering figure questioning the religion built in his name. Killed by a true believer who cannot accept that Muad'Dib is fallible."},
+   }},
+  {id:"jessica",name:"Lady Jessica",    color:"#e06060", aliases:["Reverend Mother"],
+   summary:"Made the choice that started everything — bearing a son instead of the daughter the Bene Gesserit ordered. Her disobedience shapes the entire saga.",
+   arc:{
+     dp1:{phase:"Rise",    headline:"The Disobedient Weapon",      story:"A Bene Gesserit trained warrior and Paul's mother. Her decision to bear a son instead of a daughter sets the messianic bloodline in motion. Guides Paul through the spice agony and becomes a Reverend Mother of the Fremen — deeper into the Bene Gesserit plan than she admitted."},
+     dp2:{phase:"Peak",    headline:"The True Believer",           story:"Fully embraces the Bene Gesserit agenda, promoting Paul's messianic role even as he tries to resist it. Her manipulation of Fremen religion accelerates the very Jihad that will kill billions. Villeneuve makes her complicity more explicit than Herbert did."},
+     dn: {phase:"Rise",    headline:"Concubine to Reverend Mother",story:"In the novel, Jessica is simultaneously a loving mother and a Bene Gesserit agent following orders she doesn't fully understand. Her transformation into a Fremen Reverend Mother — drinking the Water of Life while pregnant with Alia — is one of the saga's most consequential acts."},
+     df84:{phase:"Rise",   headline:"Noble Concubine",             story:"Lynch's Jessica is more passive than the novel version, defined primarily by her relationship to Duke Leto and Paul rather than her own Bene Gesserit agency."},
+     dt00:{phase:"Rise",   headline:"Strong Portrayal",            story:"The miniseries gives Jessica more agency than Lynch's film, closer to the novel's version of a woman actively steering events toward an uncertain goal."},
+   }},
+  {id:"duncan", name:"Duncan Idaho",    color:"#40c0e0", aliases:["Duncan (Ghola)","Hayt"],
+   summary:"The only character who appears in every Herbert Dune novel. Dies and is resurrected as ghola clones across 3,500 years. Herbert called him 'the finest human being the species has produced.'",
+   arc:{
+     dp1:{phase:"Rise",    headline:"First Death: The Loyal Friend",story:"House Atreides' finest warrior and Paul's closest friend. Holds off an overwhelming force of Sardaukar troops to buy time for Paul and Jessica to escape into the desert. Dies outnumbered and outgunned. His sacrifice defines Paul's sense of duty for the rest of the saga."},
+     dp2:{phase:"Fall",    headline:"Remembered in Grief",          story:"Appears in Paul's memories and Fremen accounts. His death haunts Paul throughout Part Two — the cost of the choices that led them to Arrakis."},
+     dn: {phase:"Rise",    headline:"The Loyal Swordmaster",         story:"In the novel, Duncan's death is the emotional gut-punch that signals the stakes are real. He kills dozens of Sardaukar before falling. His loyalty to the Atreides family becomes the template for every future ghola."},
+     dm: {phase:"Transformation", headline:"First Ghola: Hayt",    story:"The Bene Tleilax resurrect Duncan as a ghola named Hayt — programmed to kill Paul. Instead, Paul's friendship and love forces Hayt to recover his original memories. Duncan-Hayt chooses death over betrayal. Second death."},
+     codb:{phase:"Transformation",headline:"Second Ghola",          story:"Raised among the Fremen, discovers his Tleilaxu conditioning. His recurring resurrection across each novel becomes a meditation on identity — is a ghola the same person if they share memories but were grown in an axolotl tank?"},
+     ge:  {phase:"Transcendence",  headline:"The Thousandth Ghola",  story:"3,500 years after his first death, Duncan Idaho has been resurrected hundreds of times. Leto II keeps bringing him back as a test of humanity's spirit — because Duncan always eventually rebels against tyranny. He is the measure of what humans could be."},
+     df84:{phase:"Rise",    headline:"Early Sacrifice",             story:"Lynch's Duncan dies early, giving Paul his first real taste of loss. Richard Jordan's warm portrayal made the death hit harder than most of Lynch's streamlined adaptation."},
+     dt00:{phase:"Rise",    headline:"Loyal Commander",             story:"The miniseries gives Duncan more screen time than Lynch did, showing his warmth and competence before the inevitable sacrifice."},
+   }},
+  {id:"chani",  name:"Chani",           color:"#e08040", aliases:["Sihaya"],
+   summary:"Paul's love and the Fremen conscience of the saga. Refuses to accept the messianic myth even as everyone else surrenders to it.",
+   arc:{
+     dp1:{phase:"Rise",    headline:"The Desert Vision",            story:"Appears first in Paul's prescient visions before he ever reaches Arrakis. When they finally meet, she is skeptical of outsiders and their prophecies — she has seen too many people use Fremen belief as a weapon."},
+     dp2:{phase:"Rise",    headline:"The One Who Refuses",          story:"Villeneuve's most significant deviation from the novel: Chani never accepts Paul's messianic role. She watches the man she loves choose a path she knows will destroy the Fremen way of life. She rides away from his coronation into the open desert — the story's most honest ending."},
+     dn: {phase:"Rise",    headline:"Willing Believer",             story:"Novel Chani is more willing to accept Paul's role than film Chani. She becomes deeply invested in his mission, which makes her death in Dune Messiah — in childbirth, the death Paul saw coming but could not prevent — more devastating."},
+     dm: {phase:"Fall",    headline:"Death in Childbirth",          story:"Dies giving birth to twins Leto and Ghanima. Paul foresaw it and could not stop it. Her death fulfills a prophecy that destroys Paul — he retreats into complete prescience and walks into the desert. The woman who kept him human is gone."},
+     df84:{phase:"Rise",   headline:"Love Interest",                story:"Lynch's Chani is defined largely by her relationship to Paul. Sean Young plays her with desert toughness but the script doesn't give her the political complexity of the novel."},
+     dt00:{phase:"Rise",   headline:"Warrior Prophet",              story:"The miniseries shows Chani as a full Fremen warrior before her relationship with Paul, grounding her skepticism in lived experience rather than just instinct."},
+   }},
+  {id:"stilgar",name:"Stilgar",         color:"#80c060", aliases:[],
+   summary:"The Fremen Naib who endures across the entire saga — from skeptic to true believer to broken follower. His arc is the arc of Fremen culture itself.",
+   arc:{
+     dp1:{phase:"Rise",    headline:"The Suspicious Chief",         story:"Initially deeply skeptical of Paul and Jessica. But he recognizes Paul's combat ability and Jessica's Bene Gesserit power. Takes them in as members of his sietch — partly pragmatic, partly sensing something he cannot name."},
+     dp2:{phase:"Peak",    headline:"The True Believer",            story:"By Part Two, Stilgar has become Paul's most devoted follower. Where Chani sees a man choosing a terrible path, Stilgar sees the fulfillment of everything the Fremen have been promised. His devotion becomes almost comic — he interprets Paul's most offhand comments as divine wisdom."},
+     dn: {phase:"Rise",    headline:"The Desert Judge",             story:"In the novel, Stilgar represents traditional Fremen authority — earned through combat, respected through wisdom. His gradual transformation into a true believer is more subtle and more tragic than in the films."},
+     dm: {phase:"Peak",    headline:"Loyal to the End",             story:"Remains loyal to Paul through the betrayals, the Jihad, and the emperorship. Sees Paul's abdication as the final test of a great leader rather than a failure."},
+     codb:{phase:"Fall",   headline:"Torn Loyalties",               story:"Now serves Paul's children. Watches Alia's descent into possession with growing horror. His loyalty to the Atreides house conflicts with what he knows is happening. Ultimately cannot stop it."},
+     cod3:{phase:"Fall",   headline:"The Elder Statesman",          story:"The TV adaptation shows Stilgar as a wise elder watching the empire Paul built collapse from within. His quiet grief is one of the miniseries' most effective performances."},
+     df84:{phase:"Rise",   headline:"Desert Warrior",               story:"Lynch's Stilgar is fierce and efficient. Less complex than the novel but effectively conveys the Fremen code of strength and survival."},
+     dt00:{phase:"Rise",   headline:"Fremen Chief",                 story:"The miniseries gives Stilgar space to develop his relationship with Paul over time, making his later devotion feel earned."},
+   }},
+  {id:"baron",  name:"Baron Harkonnen", color:"#c040c0", aliases:["The Baron","Vladimir"],
+   summary:"The primary antagonist of the first novel. Grotesque, brilliant, and utterly amoral. His genetic legacy haunts the saga long after his death.",
+   arc:{
+     dp1:{phase:"Peak",    headline:"The Architect of Betrayal",    story:"Orchestrates the complete destruction of House Atreides — working with imperial Sardaukar through a trusted Atreides traitor. His plan works perfectly. Paul and Jessica escape into the desert, the only loose ends he doesn't know about."},
+     dp2:{phase:"Fall",    headline:"Death by Pre-Born",            story:"Killed by Alia — Paul's sister, born fully conscious with ancestral memories including the Baron's own. She uses a Gom Jabbar. The man who destroyed House Atreides is killed by its youngest member, a toddler with the memories of every ancestor including him."},
+     dn: {phase:"Peak",    headline:"The Complete Villain",         story:"The novel's Baron is even more detailed in his scheming. Herbert gives him a grotesque physicality — he requires suspensors just to move his body — and makes him genuinely intelligent, which makes him more frightening than a simple brute."},
+     df84:{phase:"Peak",   headline:"Operatic Grotesque",           story:"Kenneth McMillan's Baron is one of cinema's most flamboyant villains — pustules, levitation, murderous whims. Lynch leans into the gothic excess. Closer to grand guignol than Herbert's chilling pragmatist."},
+     dt00:{phase:"Peak",   headline:"Political Schemer",            story:"The miniseries presents the Baron as a more contained political operator — still villainous but less theatrical, which makes his schemes feel more credibly dangerous."},
+   }},
+  {id:"alia",   name:"Alia Atreides",   color:"#e0a040", aliases:["Saint Alia of the Knife","Alia of the Knife"],
+   summary:"Born fully conscious with ancestral memories — a 'pre-born.' The most tragic figure in the saga. Starts as a miracle and ends as a vessel for the consciousness she was born carrying.",
+   arc:{
+     dp2:{phase:"Rise",    headline:"The Born Knowing",             story:"Born during the events of Part Two — already fully conscious in the womb because Jessica drank the Water of Life while pregnant. Kills the Baron as a toddler. Her existence is both a miracle and a warning about what the Bene Gesserit's breeding program has unleashed."},
+     dm: {phase:"Rise",    headline:"Growing Into Power",           story:"By Dune Messiah, Alia is a young woman wielding enormous power. She is prescient, a deadly fighter, and politically astute. But the ancestral memories she carries — including the Baron's — are beginning to pressure her."},
+     codb:{phase:"Fall",   headline:"Possessed",                    story:"The tragedy of Children of Dune. Alia succumbs to Abomination — the ancestral memory she was born carrying finally overwhelms her individual consciousness. The Baron's personality, the dominant voice in her genetic memory, takes control. She becomes a tyrant and, recognizing what she has become, throws herself from a window. The most devastating arc in the saga."},
+     cod3:{phase:"Fall",   headline:"Sympathetic Descent",          story:"The TV miniseries is kinder to Alia than the novel — showing her struggle against possession more explicitly and making her fall feel more like a tragedy than a moral failure."},
+   }},
+  {id:"leto2",  name:"Leto II",         color:"#a0a0ff", aliases:["The God Emperor","The Worm","The Tyrant"],
+   summary:"Paul's son who sacrifices his humanity to save humanity. Merges with sandtrout to become a human-sandworm hybrid. Rules for 3,500 years. Chooses to die to shatter the empire that has made humanity safe and stagnant.",
+   arc:{
+     codb:{phase:"Rise",   headline:"The Choice No One Else Would Make",story:"As a child, Leto II sees further into the future than even his father. He understands that the only path to humanity's long-term survival is a tyranny so complete and so long that when it ends, humans will scatter across the universe and never again be vulnerable to extinction. He begins merging with sandtrout, sacrificing his humanity for the plan."},
+     cod3:{phase:"Rise",   headline:"The Boy Who Chose",            story:"James McAvoy's portrayal shows Leto as a child who is simultaneously ancient and young — carrying the weight of a decision that will define the next 3,500 years, while still grieving the loss of a normal childhood."},
+     ge:  {phase:"Transcendence",headline:"God Emperor and Willing Martyr",story:"3,500 years later, Leto is more sandworm than human. He rules with absolute power, controlling human reproduction and breeding programs, suppressing technology and travel to make humanity utterly dependent on him — and therefore utterly safe from extinction. Then he dies by design, shattering the empire and scattering humanity across the stars. The Golden Path fulfilled."},
+   }},
+  {id:"gurney", name:"Gurney Halleck",  color:"#60c0a0", aliases:[],
+   summary:"The troubadour-warrior. Paul's weapons instructor and one of the saga's most loyal figures. Survives the Harkonnen massacre, believing Paul dead, and keeps fighting.",
+   arc:{
+     dp1:{phase:"Rise",    headline:"The Weapons Master",           story:"Trains Paul in combat — 'drive a knife into a man with the flat of the blade and he'll have a sore muscle. Drive it with your wrist behind it and you might break through.' Escapes the Harkonnen attack as one of the few Atreides survivors."},
+     dp2:{phase:"Peak",    headline:"Reunited",                     story:"Finds Paul alive among the Fremen. Immediately joins the Fremen cause. His relief at finding Paul alive is one of the film's most quietly effective moments."},
+     dn: {phase:"Rise",    headline:"Troubadour and Soldier",       story:"The novel gives Gurney more depth — he carries a baliset and sings, mixing warrior efficiency with unexpected tenderness. Herbert uses him to show that the Atreides code of loyalty can coexist with genuine humanity."},
+     df84:{phase:"Rise",   headline:"Lynch's Ally",                 story:"Patrick Stewart's Gurney is fierce and loyal. One of Lynch's more successful character portrayals — the warmth and toughness balance well in a film that sometimes sacrifices character for spectacle."},
+     dt00:{phase:"Rise",   headline:"Faithful to the End",          story:"The miniseries shows Gurney's survivor guilt after the Atreides massacre more explicitly, making his reunion with Paul more emotionally resonant."},
+   }},
+  {id:"feyd",   name:"Feyd-Rautha",     color:"#ff6060", aliases:["Feyd"],
+   summary:"The Baron's favored nephew. Raised as a gladiator and political weapon. Paul's mirror — similar training, opposite values. The final obstacle.",
+   arc:{
+     dp2:{phase:"Peak",    headline:"The Harkonnen Champion",       story:"Austin Butler's Feyd is introduced in a gladiatorial arena where he murders prisoners while the crowd cheers. Cold, beautiful, and completely amoral. He exists as Paul's dark mirror — what Paul might have become without the Atreides code. Their final duel is the saga's philosophical conflict made physical."},
+   }},
+];
+const TITLES = [
+  {id:"dp1", name:"Dune: Part One", sx:0,  yr:2021, type:"film",  canon:"hard"},
+  {id:"df84",name:"Dune (1984)",    sx:1,  yr:1984, type:"film",  canon:"soft"},
+  {id:"dt00",name:"Dune TV 2000",   sx:2,  yr:2000, type:"tv",    canon:"soft"},
+  {id:"dn",  name:"Dune (Novel)",   sx:3,  yr:1965, type:"novel", canon:"hard"},
+  {id:"dp2", name:"Dune: Part Two", sx:4,  yr:2024, type:"film",  canon:"hard"},
+  {id:"dm",  name:"Dune Messiah",   sx:5,  yr:1969, type:"novel", canon:"hard"},
+  {id:"cod3",name:"Children TV",    sx:6,  yr:2003, type:"tv",    canon:"soft"},
+  {id:"codb",name:"Children (Novel)",sx:7, yr:1976, type:"novel", canon:"hard"},
+  {id:"ge",  name:"God Emperor",    sx:8,  yr:1981, type:"novel", canon:"hard"},
+];
+const TCOLOR = {novel:"#7ec87e",film:"#7eb8f7",tv:"#b07ef7"};
+const TBG    = {novel:"#1a3a1a",film:"#1a2a4a",tv:"#2a1a4a"};
+
+const ns = "http://www.w3.org/2000/svg";
+function mkEl(tag,attrs,parent){
+  const e=document.createElementNS(ns,tag);
+  Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+  if(parent)parent.appendChild(e);
+  return e;
+}
+
+let activeChar=null;
+const tip=document.getElementById("tip");
+
+function render(){
+  const svg=document.getElementById("arc-svg");
+  svg.innerHTML="";
+  const W=svg.clientWidth||900, H=svg.clientHeight||500;
+  const PAD=72, SPINE=H-145, step=(W-PAD*2)/(TITLES.length-1);
+
+  const defs=mkEl("defs",{},svg);
+  const filt=mkEl("filter",{id:"glow3",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  mkEl("feGaussianBlur",{stdDeviation:"5",result:"b"},filt);
+  const mg=mkEl("feMerge",{},filt);
+  mkEl("feMergeNode",{in:"b"},mg);
+  mkEl("feMergeNode",{in:"SourceGraphic"},mg);
+
+  mkEl("rect",{x:0,y:0,width:W,height:H,fill:"#060610"},svg);
+
+  const tx={};
+  TITLES.forEach((t,i)=>{tx[t.id]=PAD+i*step;});
+
+  // Draw arcs
+  CHARS.forEach(ch=>{
+    const apps=TITLES.filter(t=>{
+      const charObj=CHARS.find(c=>c.id===ch.id);
+      return charObj && charObj.arc && charObj.arc[t.id];
+    });
+    if(apps.length<2)return;
+    const isOn=activeChar===ch.id;
+    const isDim=activeChar&&activeChar!==ch.id;
+    const baseOp=isDim?0.02:isOn?0.95:0.18;
+    const sw=isOn?3:1.5;
+
+    for(let i=0;i<apps.length-1;i++){
+      const a=apps[i], b=apps[i+1];
+      const x1=tx[a.id], x2=tx[b.id];
+      const dist=Math.abs(b.sx-a.sx);
+      const arcH=Math.min(dist*34+18,SPINE-25);
+      const cy=SPINE-arcH;
+
+      if(isOn){
+        mkEl("path",{d:`M${x1},${SPINE} C${x1},${cy} ${x2},${cy} ${x2},${SPINE}`,
+          fill:"none",stroke:ch.color,"stroke-width":10,opacity:.1,filter:"url(#glow3)"},svg);
+      }
+      mkEl("path",{d:`M${x1},${SPINE} C${x1},${cy} ${x2},${cy} ${x2},${SPINE}`,
+        fill:"none",stroke:ch.color,"stroke-width":sw,opacity:baseOp,"stroke-linecap":"round"},svg);
+
+      // Invisible hit area
+      const arcData=ch.arc[b.id]||ch.arc[a.id];
+      const hit=mkEl("path",{d:`M${x1},${SPINE} C${x1},${cy} ${x2},${cy} ${x2},${SPINE}`,
+        fill:"none",stroke:"transparent","stroke-width":20,cursor:"pointer"},svg);
+      hit.addEventListener("mouseenter",e=>{
+        if(!activeChar||activeChar===ch.id){
+          tip.style.display="block";
+          tip.style.left=(e.clientX+14)+"px";
+          tip.style.top=(e.clientY-30)+"px";
+          const adata=ch.arc[b.id];
+          tip.innerHTML=`<span style="color:${ch.color};font-weight:600">${ch.name}</span><br>${a.name} &rarr; ${b.name}${adata?`<br><em style="color:#888">${adata.headline}</em>`:""}`;
+        }
+      });
+      hit.addEventListener("mousemove",e=>{tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY-30)+"px";});
+      hit.addEventListener("mouseleave",()=>tip.style.display="none");
+      hit.addEventListener("click",()=>{activeChar=activeChar===ch.id?null:ch.id;render();renderList();showStoryPanel();});
+    }
+
+    // Arc label when active
+    if(isOn&&apps.length>=2){
+      const a=apps[0],b=apps[1];
+      const x1=tx[a.id],x2=tx[b.id];
+      const dist=Math.abs(b.sx-a.sx);
+      const arcH=Math.min(dist*34+18,SPINE-25);
+      const mx=(x1+x2)/2, laby=SPINE-arcH-14;
+      mkEl("rect",{x:mx-30,y:laby-10,width:60,height:14,rx:7,fill:"#060610",opacity:.9},svg);
+      mkEl("text",{x:mx,y:laby,"text-anchor":"middle",fontSize:9,fill:ch.color,"font-weight":"700"},svg).textContent=ch.name.split(" ")[0];
+    }
+  });
+
+  // Spine
+  mkEl("line",{x1:PAD-24,y1:SPINE,x2:W-PAD+24,y2:SPINE,stroke:"#1e1e2e","stroke-width":1},svg);
+
+  // Title nodes
+  TITLES.forEach((t,i)=>{
+    const x=tx[t.id], color=TCOLOR[t.type];
+    const bg=TBG[t.type];
+    const R=t.canon==="hard"?11:8;
+    const labelOff=(i%2===0)?22:40;
+
+    mkEl("line",{x1:x,y1:SPINE-R-2,x2:x,y2:SPINE+labelOff+4,stroke:"#1e1e2e","stroke-width":1},svg);
+
+    const circ=mkEl("circle",{cx:x,cy:SPINE,r:R,fill:bg,stroke:color,
+      "stroke-width":t.canon==="hard"?2:1,
+      "stroke-dasharray":t.canon==="soft"?"3,2":null,cursor:"pointer"},svg);
+    circ.addEventListener("click",e=>{
+      e.stopPropagation();
+      tip.style.display="block";
+      tip.style.left=(e.clientX+14)+"px";
+      tip.style.top=(e.clientY-30)+"px";
+      const chs=CHARS.filter(c=>c.arc&&c.arc[t.id]).map(c=>c.name).join(", ");
+      tip.innerHTML=`<span style="color:${color};font-weight:600">${t.name} (${t.yr})</span><br><span style="color:#666">${chs}</span>`;
+      setTimeout(()=>tip.style.display="none",3000);
+    });
+
+    // Title label — staggered
+    const words=t.name.split(" ");
+    const h2=Math.ceil(words.length/2);
+    const l1=words.slice(0,h2).join(" "), l2=words.slice(h2).join(" ");
+    mkEl("text",{x,y:SPINE+labelOff,"text-anchor":"middle",fontSize:9,fill:color,"font-weight":"600"},svg).textContent=l1;
+    if(l2)mkEl("text",{x,y:SPINE+labelOff+10,"text-anchor":"middle",fontSize:8,fill:color+"bb"},svg).textContent=l2;
+
+    // Character dots
+    const titChars=CHARS.filter(c=>c.arc&&c.arc[t.id]).slice(0,6);
+    const dw=9, startX=x-(titChars.length-1)*dw/2;
+    titChars.forEach((c,j)=>{
+      const d=mkEl("circle",{cx:startX+j*dw,cy:SPINE+labelOff+20,r:3.5,fill:c.color,cursor:"pointer",
+        opacity:activeChar===c.id?1:0.5},svg);
+      d.addEventListener("click",e2=>{e2.stopPropagation();activeChar=activeChar===c.id?null:c.id;render();renderList();showStoryPanel();});
+    });
+  });
+
+  mkEl("text",{x:PAD,y:SPINE+80,fontSize:8,fill:"#1e1e2e"},svg).textContent="Story chronology →";
+}
+
+function showStoryPanel(){
+  const panel=document.getElementById("story-panel");
+  const inner=document.getElementById("sp-inner");
+  if(!activeChar){panel.classList.add("hide");return;}
+  panel.classList.remove("hide");
+  const ch=CHARS.find(c=>c.id===activeChar);
+  if(!ch)return;
+
+  const titlesWithChar=TITLES.filter(t=>ch.arc&&ch.arc[t.id]).sort((a,b)=>a.sx-b.sx);
+  const cards=titlesWithChar.map(t=>{
+    const app=ch.arc[t.id];
+    const color=TCOLOR[t.type];
+    const typeIcon={novel:"&#128218;",film:"&#127916;",tv:"&#128250;"}[t.type];
+    return `<div class="appearance-card" style="border-color:${color}" onclick="highlightTitle('${t.id}')">
+      <div class="ac-header">
+        <div class="ac-title">${typeIcon} ${t.name}</div>
+        <div class="ac-year">${t.yr}</div>
+      </div>
+      <div class="ac-phase" style="color:${ch.color}">${app.role||""} &middot; ${app.phase}</div>
+      <div class="ac-headline" style="color:#ddd">${app.headline}</div>
+      <div class="ac-story">${app.story}</div>
+    </div>`;
+  }).join("");
+
+  inner.innerHTML=`
+    <button onclick="closePanel()" style="float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px;margin-top:-2px">&#10005;</button>
+    <div class="sp-name" style="color:${ch.color}">${ch.name}</div>
+    <div class="sp-aliases">${ch.aliases.length?"aka: "+ch.aliases.join(", "):""}</div>
+    <div class="sp-summary" style="border-color:${ch.color}">${ch.summary}</div>
+    <div class="sp-appearances">
+      <h4>Appears in ${titlesWithChar.length} titles &mdash; click any card to highlight</h4>
+      ${cards}
+    </div>
+  `;
+}
+
+function closePanel(){activeChar=null;document.getElementById("story-panel").classList.add("hide");render();renderList();}
+window.closePanel=closePanel;
+window.highlightTitle=function(id){};
+
+function renderList(){
+  document.getElementById("clist").innerHTML=CHARS.map(ch=>{
+    const count=TITLES.filter(t=>ch.arc&&ch.arc[t.id]).length;
+    const isOn=activeChar===ch.id;
+    return `<div class="ch ${isOn?"on":""}" onclick="toggleCh('${ch.id}')">
+      <div class="dot" style="background:${ch.color};${isOn?"outline:2px solid "+ch.color+"66;outline-offset:1px":""}"></div>
+      <div><div class="cn" style="color:${isOn?ch.color:"inherit"}">${ch.name}</div>
+      <div class="cc">${count} titles${isOn?" &bull; active":""}</div></div>
+    </div>`;
+  }).join("");
+}
+
+window.toggleCh=function(id){activeChar=activeChar===id?null:id;render();renderList();showStoryPanel();};
+window.addEventListener("resize",render);
+renderList();
+render();
+</script></body></html>

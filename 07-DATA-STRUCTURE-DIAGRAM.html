@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Othelia — Data Structure</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080812;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:12px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+a.back{font-size:11px;color:#555;text-decoration:underline;margin-left:auto}
+a.back:hover{color:#c9a84c}
+.hint{font-size:11px;color:#333}
+.wrap{flex:1;display:flex;overflow:hidden}
+.sidebar{width:180px;border-right:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;padding:12px 0;flex-shrink:0}
+.sidebar h3{font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px;padding:0 12px 8px}
+.sitem{padding:6px 12px;cursor:pointer;font-size:11px;color:#555;border-left:2px solid transparent;transition:all .15s}
+.sitem:hover,.sitem.on{color:#c9a84c;border-left-color:#c9a84c;background:#c9a84c08}
+.canvas{flex:1;position:relative;overflow:hidden;cursor:grab}
+.canvas:active{cursor:grabbing}
+#svg{width:100%;height:100%}
+.panel{width:260px;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;padding:18px;flex-shrink:0}
+.panel h2{font-size:14px;margin-bottom:6px}
+.panel p{font-size:11px;color:#888;line-height:1.6;margin-bottom:12px}
+.f{padding:6px 0;border-bottom:1px solid #12121e;display:flex;align-items:flex-start;gap:8px}
+.fname{font-size:11px;color:#ddd;font-weight:500;min-width:120px}
+.ftype{font-size:9px;margin-top:2px}
+.fnote{font-size:9px;color:#444;margin-top:2px}
+.legend{padding:8px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:16px;font-size:10px;color:#444;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:5px}
+.lbox{width:10px;height:10px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">&#x2B21; DATA STRUCTURE DIAGRAM</div>
+<div class="hint">Scroll to zoom &middot; Drag to pan &middot; Click any model for field details</div>
+<button onclick="zoomFit()" style="padding:4px 12px;border-radius:14px;border:1px solid #2a2a3e;background:transparent;color:#666;font-size:11px;cursor:pointer;margin-right:8px" onmouseover="this.style.color='#c9a84c'" onmouseout="this.style.color='#666'">&#8982; Fit All</button><a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back to Demo</a>
+</header>
+<div style="padding:7px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;align-items:center;gap:10px;flex-shrink:0">
+  <span>&#9432; This diagram shows proposed additions to the Othelia data model.</span>
+  <span style="padding:2px 7px;border-radius:10px;background:#7ec87e18;border:1px solid #7ec87e33;color:#7ec87e;font-size:9px;font-weight:600">GREEN fields</span>
+  <span style="color:#333">are new fields added to existing tables. New top-level models sit above the existing Project layer without modifying extraction logic.</span>
+</div>
+<div class="wrap">
+<div class="sidebar">
+  <h3>New Models</h3>
+  <div class="sitem on"  onclick="highlight('franchise')">Franchise</div>
+  <div class="sitem"     onclick="highlight('title')">FranchiseTitle</div>
+  <div class="sitem"     onclick="highlight('canonchar')">CanonicalCharacter</div>
+  <div class="sitem"     onclick="highlight('appearance')">CharacterAppearance</div>
+  <div class="sitem"     onclick="highlight('titlelink')">TitleLink</div>
+  <div class="sitem"     onclick="highlight('extractionrun')">ExtractionRun</div>
+  <h3 style="margin-top:14px">Updated Models</h3>
+  <div class="sitem"     onclick="highlight('source')">Source</div>
+  <div class="sitem"     onclick="highlight('entity')">Entity Tables</div>
+  <div class="sitem"     onclick="highlight('project')">Project (existing)</div>
+</div>
+<div class="canvas" id="canvas">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+<div class="panel" id="panel">
+  <h2 style="color:#c9a84c">Franchise</h2>
+  <p>Top-level universe container. New model. Holds all titles, canonical characters, and their cross-title relationships. Does not touch existing Project tables.</p>
+  <div id="fields"></div>
+</div>
+</div>
+<div class="legend">
+<div class="li"><div class="lbox" style="background:#7eb8f7"></div>PK &mdash; Primary Key</div>
+<div class="li"><div class="lbox" style="background:#c9a84c"></div>FK &mdash; Foreign Key</div>
+<div class="li"><div class="lbox" style="background:#7ec87e"></div>NEW field added to existing model</div>
+<div class="li" style="margin-left:8px">&#8594; One-to-Many &nbsp;|&nbsp; &#9674; Junction / Many-to-Many</div>
+<div style="margin-left:auto;color:#222">Scroll wheel to zoom</div>
+</div>
+<script>
+const MODELS = {
+  franchise: {
+    label:"Franchise", x:80, y:160, w:220, color:"#c9a84c",
+    desc:"Top-level universe container. New model. Holds all titles, canonical characters, and their cross-title relationships. Does not touch existing Project tables.",
+    fields:[
+      {n:"id",             t:"String",   k:"PK"},
+      {n:"name",           t:"String",   note:"e.g. Dune, James Bond"},
+      {n:"slug",           t:"String",   note:"URL-safe unique identifier"},
+      {n:"description",    t:"String?"},
+      {n:"imageUrl",       t:"String?"},
+      {n:"createdAt",      t:"DateTime"},
+    ]
+  },
+  title: {
+    label:"FranchiseTitle", x:440, y:60, w:240, color:"#7eb8f7",
+    desc:"A single work in the franchise — one film, one novel, one TV episode or series. Positioned on the story timeline by storyOrder. Optionally links to an extracted Othelia Project.",
+    fields:[
+      {n:"id",           t:"String",  k:"PK"},
+      {n:"franchiseId",  t:"String",  k:"FK", note:"-> Franchise"},
+      {n:"name",         t:"String",  note:"e.g. Dune: Part One"},
+      {n:"titleType",    t:"Enum",    note:"FILM | NOVEL | TV | COMIC"},
+      {n:"canonTier",    t:"Enum",    note:"HARD | SOFT | FLEXIBLE | NON_CANON"},
+      {n:"year",         t:"Int",     note:"Release year"},
+      {n:"storyOrder",   t:"Int",     note:"In-universe chronological position"},
+      {n:"seriesGroup",  t:"String?", note:"e.g. Villeneuve Films (swim lane)"},
+      {n:"synopsis",     t:"String?"},
+      {n:"creator",      t:"String?"},
+      {n:"projectId",    t:"String?", k:"FK", note:"-> Project (optional)"},
+    ]
+  },
+  canonchar: {
+    label:"CanonicalCharacter", x:80, y:460, w:230, color:"#f0c040",
+    desc:"Cross-franchise character identity. Separate from per-project Character records produced by extraction. Soft-linked to per-project Characters via CharacterAppearance.projectCharacterId.",
+    fields:[
+      {n:"id",          t:"String",   k:"PK"},
+      {n:"franchiseId", t:"String",   k:"FK", note:"-> Franchise"},
+      {n:"name",        t:"String",   note:"e.g. Paul Atreides"},
+      {n:"aliases",     t:"String[]", note:"Muad-Dib, Usul, The Preacher"},
+      {n:"description", t:"String?"},
+      {n:"importance",  t:"Enum",     note:"PRIMARY | SECONDARY | TERTIARY"},
+      {n:"imageUrl",    t:"String?"},
+    ]
+  },
+  appearance: {
+    label:"CharacterAppearance", x:440, y:430, w:240, color:"#80c060",
+    desc:"Junction table: which canonical character appears in which title. Stores per-title arc data (role, arc summary, arc phase). This is the graph edge enabling the character arc visualization.",
+    fields:[
+      {n:"id",                   t:"String",  k:"PK"},
+      {n:"canonicalCharacterId", t:"String",  k:"FK", note:"-> CanonicalCharacter"},
+      {n:"titleId",              t:"String",  k:"FK", note:"-> FranchiseTitle"},
+      {n:"role",                 t:"Enum",    note:"PROTAGONIST | ANTAGONIST | SUPPORTING"},
+      {n:"arcSummary",           t:"String?", note:"What happens to this character"},
+      {n:"arcPhase",             t:"String?", note:"Rise | Peak | Fall | Transcendence"},
+      {n:"ageDescription",       t:"String?", note:"e.g. 15 years old"},
+      {n:"projectCharacterId",   t:"String?", note:"Soft link to extracted Character"},
+    ]
+  },
+  titlelink: {
+    label:"TitleLink", x:820, y:160, w:220, color:"#b07ef7",
+    desc:"Directed edge between two FranchiseTitles. Captures adaptation, sequel, prequel, and spinoff relationships. Powers the connection lines in the timeline visualization.",
+    fields:[
+      {n:"id",            t:"String",  k:"PK"},
+      {n:"franchiseId",   t:"String",  k:"FK", note:"-> Franchise"},
+      {n:"sourceTitleId", t:"String",  k:"FK", note:"-> FranchiseTitle"},
+      {n:"targetTitleId", t:"String",  k:"FK", note:"-> FranchiseTitle"},
+      {n:"linkType",      t:"Enum",    note:"SEQUEL | PREQUEL | ADAPTATION | SPINOFF"},
+      {n:"description",   t:"String?"},
+    ]
+  },
+  extractionrun: {
+    label:"ExtractionRun", x:820, y:430, w:220, color:"#e06060",
+    desc:"Tracks every extraction invocation. Records which source was extracted, which pipeline version ran, status, and cost data. Enables extraction version comparison and rollback.",
+    fields:[
+      {n:"id",              t:"String",   k:"PK"},
+      {n:"sourceId",        t:"String",   k:"FK", note:"-> Source"},
+      {n:"status",          t:"Enum",     note:"IN_PROGRESS | COMPLETED | SUPERSEDED"},
+      {n:"pipelineVersion", t:"String",   note:"Git SHA of extraction pipeline"},
+      {n:"startedAt",       t:"DateTime"},
+      {n:"completedAt",     t:"DateTime?"},
+      {n:"tokenUsage",      t:"Int?",     note:"Total tokens consumed"},
+      {n:"estimatedCost",   t:"Float?",   note:"USD cost of this run"},
+    ]
+  },
+  source: {
+    label:"Source", x:440, y:720, w:240, color:"#e08040",
+    desc:"UPDATED: Existing model gains two new fields. canonTier enables AskOthelia canon-scoped Milvus retrieval. franchiseTitleId links an ingested document into the franchise timeline.",
+    fields:[
+      {n:"... existing fields ...", t:""},
+      {n:"franchiseTitleId", t:"String?", k:"FKN", note:"NEW -> FranchiseTitle"},
+      {n:"canonTier",        t:"Enum",    k:"NEW",  note:"NEW: HARD | SOFT | FLEXIBLE | NON_CANON"},
+    ]
+  },
+  entity: {
+    label:"Entity Tables", x:820, y:700, w:230, color:"#60c0a0",
+    desc:"UPDATED: All entity tables (Character, Event, Location, Section, Conflict, Relationship, Group) gain four new fields enabling source-scoped extraction and full edit provenance.",
+    fields:[
+      {n:"... existing fields ...", t:""},
+      {n:"sourceId",        t:"String",    k:"FKN", note:"NEW -> Source"},
+      {n:"extractionRunId", t:"String",    k:"FKN", note:"NEW -> ExtractionRun"},
+      {n:"lastModifiedBy",  t:"Enum",      k:"NEW",  note:"NEW: EXTRACTION | USER | AI_CHAT"},
+      {n:"deletedAt",       t:"DateTime?", k:"NEW",  note:"NEW: soft delete for rollback"},
+    ]
+  },
+  project: {
+    label:"Project (existing)", x:1140, y:60, w:220, color:"#555",
+    desc:"EXISTING model — unchanged. FranchiseTitle optionally links to a Project when that title has been extracted into Othelia. All new franchise models sit above this layer.",
+    fields:[
+      {n:"id",          t:"String",  k:"PK"},
+      {n:"name",        t:"String"},
+      {n:"... existing fields ...", t:""},
+    ]
+  }
+};
+
+const EDGES = [
+  {f:"franchise",  t:"title",       lbl:"1 : many",      color:"#c9a84c44", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"franchise",  t:"canonchar",   lbl:"1 : many",      color:"#f0c04044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
+  {f:"franchise",  t:"titlelink",   lbl:"1 : many",      color:"#b07ef744", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"title",      t:"appearance",  lbl:"1 : many",      color:"#80c06044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
+  {f:"canonchar",  t:"appearance",  lbl:"1 : many",      color:"#f0c04044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"title",      t:"titlelink",   lbl:"source/target", color:"#b07ef744", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"title",      t:"project",     lbl:"optional",      color:"#55555544", ox:"right",  oy:"top",  ix:"left",  iy:"top"},
+  {f:"title",      t:"source",      lbl:"1 : many",      color:"#e0804044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
+  {f:"source",     t:"entity",      lbl:"1 : many",      color:"#60c0a044", ox:"right",  oy:"mid",  ix:"left",  iy:"mid"},
+  {f:"source",     t:"extractionrun",lbl:"1 : many",     color:"#e0606044", ox:"top",    oy:"mid",  ix:"bottom",iy:"mid"},
+  {f:"extractionrun",t:"entity",    lbl:"1 : many",      color:"#60c0a044", ox:"bottom", oy:"mid",  ix:"top",   iy:"mid"},
+];
+
+const ns = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(ns, tag);
+  Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k,v));
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+let activeModel = "franchise";
+let zoom = 0.62, panX = 10, panY = 10, dragging = false, lastX = 0, lastY = 0;
+
+function nodePort(m, side) {
+  const w = m.w || 220;
+  const FH = 20, HH = 32, PAD = 8;
+  const h = HH + m.fields.length * FH + PAD * 2;
+  if (side === "left")   return [m.x, m.y + HH / 2];
+  if (side === "right")  return [m.x + w, m.y + HH / 2];
+  if (side === "top")    return [m.x + w / 2, m.y];
+  if (side === "bottom") return [m.x + w / 2, m.y + h];
+  return [m.x + w / 2, m.y + h / 2];
+}
+
+function render() {
+  const svg = document.getElementById("svg");
+  svg.innerHTML = "";
+  const defs = svgEl("defs",{},svg);
+
+  // Arrow markers for each edge color
+  EDGES.forEach((e, i) => {
+    const mk = svgEl("marker",{id:"arr"+i,markerWidth:"10",markerHeight:"10",refX:"8",refY:"3",orient:"auto"},defs);
+    svgEl("path",{d:"M0,0 L0,6 L9,3 z",fill:e.color.replace("44","cc")},mk);
+  });
+
+  // Glow filter
+  const filt = svgEl("filter",{id:"glow",x:"-30%",y:"-30%",width:"160%",height:"160%"},defs);
+  svgEl("feGaussianBlur",{stdDeviation:"4",result:"b"},filt);
+  const mg = svgEl("feMerge",{},filt);
+  svgEl("feMergeNode",{in:"b"},mg);
+  svgEl("feMergeNode",{in:"SourceGraphic"},mg);
+
+  // Main transform group (pan + zoom)
+  const g = svgEl("g",{transform:`translate(${panX},${panY}) scale(${zoom})`},svg);
+
+  // Background
+  svgEl("rect",{x:-200,y:-200,width:2000,height:1400,fill:"#080812"},g);
+
+  // Draw edges first
+  EDGES.forEach((e, i) => {
+    const a = MODELS[e.f], b = MODELS[e.t];
+    if (!a || !b) return;
+    const FH = 20, HH = 32, PAD = 8;
+    const ah = HH + a.fields.length * FH + PAD * 2;
+    const bh = HH + b.fields.length * FH + PAD * 2;
+
+    const [x1, y1] = nodePort(a, e.ox);
+    const [x2, y2] = nodePort(b, e.ix);
+
+    // Orthogonal routing: elbow connector
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    let d;
+    const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+    if (e.ox === "right" || e.ox === "left") {
+      // horizontal first
+      d = `M${x1},${y1} C${midX},${y1} ${midX},${y2} ${x2},${y2}`;
+    } else {
+      // vertical first
+      d = `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
+    }
+
+    svgEl("path",{d,fill:"none",stroke:e.color,
+      "stroke-width":"2","marker-end":`url(#arr${i})`},g);
+
+    // Edge label at midpoint
+    const lx = (x1+x2)/2, ly = (y1+y2)/2;
+    const bg = svgEl("rect",{x:lx-24,y:ly-8,width:48,height:13,rx:3,fill:"#080812",opacity:.85},g);
+    const lt = svgEl("text",{x:lx,y:ly+1,fontSize:8,fill:e.color.replace("44","bb"),"text-anchor":"middle"},g);
+    lt.textContent = e.lbl;
+  });
+
+  // Draw nodes
+  Object.entries(MODELS).forEach(([id, m]) => {
+    const w = m.w || 220;
+    const FH = 20, HH = 32, PAD = 8;
+    const h = HH + m.fields.length * FH + PAD * 2;
+    const isActive = id === activeModel;
+
+    const g2 = svgEl("g",{transform:`translate(${m.x},${m.y})`,cursor:"pointer"},g);
+    g2.addEventListener("click", () => highlight(id));
+
+    // Shadow
+    svgEl("rect",{x:4,y:4,width:w,height:h,rx:8,fill:"#000",opacity:.5},g2);
+
+    // Main body
+    svgEl("rect",{x:0,y:0,width:w,height:h,rx:8,fill:"#0d0d18",
+      stroke:isActive ? m.color : "#1e1e2e",
+      "stroke-width":isActive ? 2 : 1,
+      filter: isActive ? "url(#glow)" : ""},g2);
+
+    // Header band
+    svgEl("rect",{x:0,y:0,width:w,height:HH,rx:8,fill:m.color+"28"},g2);
+    svgEl("rect",{x:0,y:HH-6,width:w,height:6,fill:m.color+"28"},g2);
+
+    // Header label
+    svgEl("text",{x:10,y:21,fontSize:11,fill:m.color,"font-weight":"700"},g2).textContent = m.label;
+
+    // Fields
+    m.fields.forEach((f, i) => {
+      const fy = HH + PAD + i * FH;
+      // Stripe alternate rows
+      if (i % 2 === 0) svgEl("rect",{x:1,y:fy-1,width:w-2,height:FH,fill:m.color+"08"},g2);
+
+      const fill = f.k === "PK" ? "#7eb8f7" : (f.k === "FK" || f.k === "FKN") ? "#c9a84c" : f.k === "NEW" ? "#7ec87e" : "#aaa";
+      const badge = f.k === "PK" ? "PK" : f.k === "FK" ? "FK" : f.k === "FKN" ? "FK*" : f.k === "NEW" ? "NEW" : "";
+
+      if (badge) {
+        svgEl("rect",{x:w-32,y:fy+1,width:28,height:13,rx:3,fill:fill+"22"},g2);
+        svgEl("text",{x:w-18,y:fy+10,fontSize:7,fill,textAnchor:"middle","font-weight":"700"},g2).textContent = badge;
+      }
+      svgEl("text",{x:10,y:fy+13,fontSize:10,fill},g2).textContent = f.n;
+      if (f.note) svgEl("text",{x:badge ? w-36 : w-6,y:fy+13,fontSize:8,fill:"#444","text-anchor":"end"},g2).textContent = f.note.slice(0,20);
+    });
+  });
+}
+
+function highlight(id) {
+  activeModel = id;
+  document.querySelectorAll(".sitem").forEach(s => {
+    s.classList.toggle("on", s.getAttribute("onclick") === `highlight('${id}')`);
+  });
+  const m = MODELS[id];
+  if (!m) return;
+  document.getElementById("panel").innerHTML = `
+    <h2 style="color:${m.color};margin-bottom:6px">${m.label}</h2>
+    <p>${m.desc}</p>
+    <div>${m.fields.map(f => {
+      const fill = f.k==="PK"?"#7eb8f7":f.k==="FK"||f.k==="FKN"?"#c9a84c":f.k==="NEW"?"#7ec87e":"#666";
+      return `<div class="f">
+        <div style="flex:1"><div class="fname">${f.n}</div>${f.note?`<div class="fnote">${f.note}</div>`:""}</div>
+        <div class="ftype" style="color:${fill}">${f.t}${f.k?` [${f.k.replace("FKN","FK*")}]`:""}</div>
+      </div>`;
+    }).join("")}</div>
+  `;
+  render();
+}
+
+// Pan and zoom
+const canvas = document.getElementById("canvas");
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  zoom = Math.max(0.3, Math.min(2, zoom * delta));
+  render();
+}, {passive:false});
+canvas.addEventListener("mousedown", e => { dragging=true; lastX=e.clientX; lastY=e.clientY; });
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  panX += e.clientX - lastX;
+  panY += e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  render();
+});
+window.addEventListener("mouseup", () => dragging = false);
+
+window.zoomFit = function() { zoom=0.62; panX=10; panY=10; render(); };
+window.highlight = highlight;
+window.renderSchema = render;
+highlight("franchise");
+</script>
+</body></html>

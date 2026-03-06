@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Othelia — Dune Franchise Timeline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080812;color:#e0e0e8;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:14px 24px;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;gap:20px;background:#0a0a18;flex-shrink:0;z-index:10}
+.logo{font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+.title{font-size:11px;color:#555;margin-top:2px}
+.filters{display:flex;gap:6px;margin-left:auto}
+.fb{padding:4px 12px;border-radius:20px;border:1px solid #2a2a3e;background:transparent;color:#666;font-size:11px;cursor:pointer;transition:all .15s}
+.fb:hover,.fb.on{background:#c9a84c18;border-color:#c9a84c88;color:#c9a84c}
+.wrap{display:flex;flex:1;overflow:hidden}
+.chars{width:190px;border-right:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;flex-shrink:0;padding:12px 0}
+.chars h3{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:1px;padding:0 14px 8px}
+.ch{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;transition:background .15s;border-left:2px solid transparent}
+.ch:hover{background:#ffffff08}
+.ch.active{background:#c9a84c10;border-left-color:#c9a84c}
+.ch.dimmed{opacity:.3}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ch-info .name{font-size:12px;font-weight:500}
+.ch-info .sub{font-size:10px;color:#555;margin-top:1px}
+.canvas-wrap{flex:1;position:relative;overflow:hidden}
+svg#viz{width:100%;height:100%}
+.track-label{font-size:10px;fill:#444;text-transform:uppercase;letter-spacing:.8px}
+.axis-label{font-size:9px;fill:#333;text-transform:uppercase}
+.story-label{font-size:10px;fill:#555}
+.node-circle{cursor:pointer;transition:all .2s}
+.node-circle:hover{filter:brightness(1.4)}
+.node-text{font-size:10px;fill:#bbb;text-anchor:middle;pointer-events:none}
+.node-year{font-size:9px;fill:#555;text-anchor:middle;pointer-events:none}
+.char-path{fill:none;stroke-width:2;opacity:.2;transition:opacity .2s;stroke-linecap:round}
+.char-path.active{opacity:1;stroke-width:3}
+.char-path.faded{opacity:.04}
+.canon-ring{fill:none;stroke-width:1.5;opacity:.5}
+.panel{width:300px;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;flex-shrink:0;transition:width .25s,opacity .25s}
+.panel.hide{width:0;opacity:0;overflow:hidden;border:none}
+.pc{padding:18px;min-width:300px}
+.pc h2{font-size:15px;color:#c9a84c;margin-bottom:3px}
+.pmeta{font-size:10px;color:#555;margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap}
+.badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;background:#1e1e2e;color:#888}
+.badge.hc{background:#2d2200;color:#c9a84c;border:1px solid #c9a84c44}
+.sec h4{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#444;border-bottom:1px solid #1e1e2e;padding-bottom:5px;margin-bottom:8px}
+.sec{margin-bottom:14px}
+.citem{padding:6px 0;border-bottom:1px solid #12121e;cursor:pointer;display:flex;align-items:center;gap:8px}
+.citem:hover .cname{color:#c9a84c}
+.cname{font-size:12px;font-weight:500}
+.carc{font-size:10px;color:#555;margin-top:2px;line-height:1.4}
+.crole{font-size:9px;color:#888;padding:1px 5px;background:#1e1e2e;border-radius:8px;flex-shrink:0}
+.arc-stop{padding:10px 12px;border-radius:6px;margin-bottom:6px;background:#12121e;border-left:3px solid;cursor:pointer;transition:border-color .2s}
+.arc-stop:hover{filter:brightness(1.2)}
+.ast-title{font-size:12px;font-weight:500}
+.ast-meta{font-size:10px;color:#666;margin-top:2px}
+.ast-arc{font-size:11px;color:#888;margin-top:4px;line-height:1.4;font-style:italic}
+.xbtn{float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px;margin-top:-2px}
+.xbtn:hover{color:#c9a84c}
+.legend{padding:8px 20px;border-top:1px solid #1a1a2e;display:flex;gap:16px;font-size:10px;color:#555;background:#0a0a18;flex-shrink:0;align-items:center}
+.li{display:flex;align-items:center;gap:5px}
+</style>
+</head>
+<body>
+<header>
+<div><div class="logo">⬡ OTHELIA</div><div class="title">Dune Franchise · Navigable Story Timeline · Click titles or characters</div></div>
+<div class="filters">
+<button class="fb on" onclick="setFilter('all',this)">All</button>
+<button class="fb" onclick="setFilter('hard',this)">Hard Canon</button>
+<button class="fb" onclick="setFilter('novel',this)">Novels</button>
+<button class="fb" onclick="setFilter('film',this)">Films</button>
+<button class="fb" onclick="setFilter('tv',this)">TV</button>
+</div>
+</header>
+<div class="wrap">
+<div class="chars">
+<h3>Characters</h3>
+<div id="char-list"></div>
+</div>
+<div class="canvas-wrap">
+<svg id="viz" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+<div class="panel hide" id="panel"><div class="pc" id="pc"></div></div>
+</div>
+<div class="legend">
+<div class="li"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#2a4a2a" stroke="#7ec87e" stroke-width="1.5"/></svg>Novel</div>
+<div class="li"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#1a2a4a" stroke="#7eb8f7" stroke-width="1.5"/></svg>Film</div>
+<div class="li"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#2a1a4a" stroke="#b07ef7" stroke-width="1.5"/></svg>TV</div>
+<div class="li"><svg width="14" height="4"><rect width="14" height="4" rx="2" fill="#c9a84c"/></svg>Hard Canon</div>
+<div class="li"><svg width="14" height="4"><rect width="14" height="4" rx="2" fill="#7eb8f7" opacity=".5"/></svg>Soft Canon</div>
+<div style="margin-left:auto;color:#333">Story time flows left → right &nbsp;|&nbsp; Character threads connect across all titles</div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const CHARS = [
+  {id:'paul',  name:'Paul Atreides', aliases:['Muad'Dib','Usul'], color:'#f0c040', desc:'Heir who becomes messianic emperor'},
+  {id:'jessica',name:'Lady Jessica', aliases:['Reverend Mother'],   color:'#e06060', desc:'Bene Gesserit concubine, Paul's mother'},
+  {id:'duncan', name:'Duncan Idaho',  aliases:['Duncan (Ghola)'],   color:'#40c0e0', desc:'Dies in Dune, resurrected as gholas across millennia'},
+  {id:'chani',  name:'Chani',         aliases:['Sihaya'],           color:'#e08040', desc:'Fremen warrior, Paul's companion'},
+  {id:'stilgar',name:'Stilgar',       aliases:[],                   color:'#80c060', desc:'Fremen Naib, enduring across the saga'},
+  {id:'baron',  name:'Baron Harkonnen',aliases:['The Baron'],       color:'#c040c0', desc:'Primary antagonist, scheming villain'},
+  {id:'alia',   name:'Alia Atreides', aliases:['Saint Alia'],       color:'#e0a040', desc:'Pre-born sister, tragic arc from Messiah onward'},
+  {id:'leto2',  name:'Leto II',       aliases:['God Emperor'],      color:'#a0a0ff', desc:'Paul's son, sacrifices humanity to become god-worm'},
+  {id:'gurney', name:'Gurney Halleck',aliases:[],                   color:'#60c0a0', desc:'Troubadour-warrior, loyal Atreides'},
+  {id:'feyd',   name:'Feyd-Rautha',   aliases:['Feyd'],             color:'#ff6060', desc:'Harkonnen champion, Paul's final rival'},
+];
+
+// sx = story-time x position (0-1000). Same sx = same story events.
+// track: 0=Herbert novels, 1=Villeneuve films, 2=Lynch/other films, 3=TV miniseries
+const NODES = [
+  // ── Story events: Dune (House Atreides / Arrival / Victory) ──────────
+  {id:'dn',  label:'Dune
+(Novel)',      sx:300, track:0, y65:1965, type:'novel', canon:'hard', creator:'Frank Herbert',
+   synopsis:'Paul Atreides arrives on Arrakis, survives betrayal, joins the Fremen and defeats the Harkonnens.',
+   chars:['paul','jessica','duncan','stilgar','chani','baron','gurney'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'Orphaned heir becomes Fremen messiah',phase:'Rise'},jessica:{role:'SUPPORTING',arc:'Becomes Reverend Mother of the Fremen',phase:'Rise'},duncan:{role:'SUPPORTING',arc:'Loyal swordmaster — dies protecting Paul',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Suspicious Fremen chief who adopts Paul',phase:'Rise'},chani:{role:'SUPPORTING',arc:'Fremen warrior, Paul's prophesied companion',phase:'Rise'},baron:{role:'ANTAGONIST',arc:'Orchestrates Atreides destruction',phase:'Peak'},gurney:{role:'SUPPORTING',arc:'Loyal weapons master, trains Paul',phase:'Rise'}}},
+  {id:'dp1', label:'Dune: Part One
+(2021)', sx:240, track:1, yr:2021, type:'film', canon:'hard', creator:'Denis Villeneuve',
+   synopsis:'Villeneuve's adaptation of the first half of Herbert's novel — Paul's arrival on Arrakis and first contact with the Fremen.',
+   chars:['paul','jessica','duncan','stilgar','chani','baron','gurney'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'Young heir discovers destiny on Arrakis',phase:'Rise'},jessica:{role:'SUPPORTING',arc:'Bene Gesserit trained warrior-concubine',phase:'Rise'},duncan:{role:'SUPPORTING',arc:'First to die protecting the Atreides',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Suspicious Fremen leader',phase:'Rise'},chani:{role:'SUPPORTING',arc:'Appears in Paul's prescient visions',phase:'Rise'},baron:{role:'ANTAGONIST',arc:'Orchestrates Atreides destruction',phase:'Peak'},gurney:{role:'SUPPORTING',arc:'Loyal weapons instructor',phase:'Rise'}}},
+  {id:'dp2', label:'Dune: Part Two
+(2024)', sx:380, track:1, yr:2024, type:'film', canon:'hard', creator:'Denis Villeneuve',
+   synopsis:'Paul embraces his role as Muad'Dib and leads the Fremen in holy war. Alia is born. The Jihad begins.',
+   chars:['paul','chani','stilgar','jessica','baron','gurney','alia','feyd'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'Becomes Muad'Dib, ignites the Jihad',phase:'Peak'},chani:{role:'SUPPORTING',arc:'Refuses Paul's messianic role — tragic divide',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Devoted true believer in the prophecy',phase:'Peak'},jessica:{role:'SUPPORTING',arc:'Fully embraces Bene Gesserit agenda',phase:'Peak'},baron:{role:'ANTAGONIST',arc:'Dies by Alia's hand',phase:'Fall'},gurney:{role:'SUPPORTING',arc:'Reunited with Paul, joins the Fremen cause',phase:'Peak'},alia:{role:'SUPPORTING',arc:'Born as fully conscious pre-born',phase:'Rise'},feyd:{role:'ANTAGONIST',arc:'Harkonnen gladiator champion — Paul's final duel',phase:'Peak'}}},
+  {id:'df84',label:'Dune
+(1984 Film)',  sx:310, track:2, yr:1984, type:'film', canon:'soft', creator:'David Lynch',
+   synopsis:'Lynch's surrealist adaptation — visually striking, tonally operatic, compresses both halves of the novel.',
+   chars:['paul','jessica','duncan','stilgar','chani','baron','gurney'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'More overtly heroic portrayal',phase:'Rise'},jessica:{role:'SUPPORTING',arc:'Novel-faithful arc',phase:'Rise'},duncan:{role:'SUPPORTING',arc:'Sacrifices himself early',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Fremen warrior leader',phase:'Rise'},chani:{role:'SUPPORTING',arc:'Love interest, prescient dreams',phase:'Rise'},baron:{role:'ANTAGONIST',arc:'Grotesquely villainous portrayal',phase:'Peak'},gurney:{role:'SUPPORTING',arc:'Loyal troubadour-warrior',phase:'Rise'}}},
+  {id:'dt00', label:'Dune
+(TV 2000)',   sx:310, track:3, yr:2000, type:'tv',   canon:'soft', creator:'John Harrison',
+   synopsis:'Praised for its fidelity to Herbert's novel. Full adaptation across both halves of the story.',
+   chars:['paul','jessica','duncan','stilgar','chani','baron','gurney'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'Faithful adaptation of Paul's journey',phase:'Rise'},jessica:{role:'SUPPORTING',arc:'Strong Bene Gesserit portrayal',phase:'Rise'},duncan:{role:'SUPPORTING',arc:'Loyal Atreides commander',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Fremen chief',phase:'Rise'},chani:{role:'SUPPORTING',arc:'Fremen warrior and prophet',phase:'Rise'},baron:{role:'ANTAGONIST',arc:'Political schemer',phase:'Peak'},gurney:{role:'SUPPORTING',arc:'Troubadour warrior',phase:'Rise'}}},
+  // ── Story events: Dune Messiah (12 years later) ─────────────────────
+  {id:'dm',  label:'Dune Messiah
+(Novel)', sx:560, track:0, yr:1969, type:'novel', canon:'hard', creator:'Frank Herbert',
+   synopsis:'Twelve years into Paul's reign as Emperor. The Jihad has killed billions. Paul faces his prophesied doom.',
+   chars:['paul','chani','alia','stilgar','duncan'],
+   arcs:{paul:{role:'PROTAGONIST',arc:'Emperor haunted by prescience and the Jihad's horror',phase:'Fall'},chani:{role:'SUPPORTING',arc:'Dies in childbirth — fulfilling the prophecy Paul feared',phase:'Fall'},alia:{role:'SUPPORTING',arc:'Paul's sister, growing in power and instability',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Loyal but troubled Fremen elder',phase:'Peak'},duncan:{role:'SUPPORTING',arc:'First ghola resurrection — struggles with false memories',phase:'Transformation'}}},
+  // ── Story events: Children of Dune (15 years later) ─────────────────
+  {id:'codb',label:'Children of Dune
+(Novel)',sx:700, track:0, yr:1976, type:'novel', canon:'hard', creator:'Frank Herbert',
+   synopsis:'Paul's twins Leto and Ghanima navigate the crumbling empire. Alia is possessed by the Baron. Leto chooses the Golden Path.',
+   chars:['alia','leto2','stilgar','duncan'],
+   arcs:{alia:{role:'PROTAGONIST',arc:'Possessed by Baron's memory, becomes a tyrant, dies',phase:'Fall'},leto2:{role:'PROTAGONIST',arc:'Chooses the Golden Path — begins sandtrout transformation',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Torn between loyalty and horror at Alia's fall',phase:'Fall'},duncan:{role:'SUPPORTING',arc:'Second ghola — discovers his conditioning',phase:'Transformation'}}},
+  {id:'cod03',label:'Children of Dune
+(TV 2003)', sx:700, track:3, yr:2003, type:'tv', canon:'soft', creator:'Greg Yaitanes',
+   synopsis:'TV adaptation covering both Dune Messiah and Children of Dune novels. James McAvoy as Leto II.',
+   chars:['alia','leto2','stilgar','paul'],
+   arcs:{alia:{role:'PROTAGONIST',arc:'Sympathetic descent into possession',phase:'Fall'},leto2:{role:'PROTAGONIST',arc:'Young Leto chooses transformation',phase:'Rise'},stilgar:{role:'SUPPORTING',arc:'Elder statesman of the Fremen',phase:'Fall'},paul:{role:'SUPPORTING',arc:'The Preacher — blind wanderer, brief appearance',phase:'Fall'}}},
+  // ── Story events: God Emperor (3500 years later) ─────────────────────
+  {id:'ge',  label:'God Emperor
+(Novel)',  sx:900, track:0, yr:1981, type:'novel', canon:'hard', creator:'Frank Herbert',
+   synopsis:'3,500 years after Paul. Leto II rules as a hybrid worm-god, guiding humanity's future through the Golden Path.',
+   chars:['leto2','duncan'],
+   arcs:{leto2:{role:'PROTAGONIST',arc:'Millennia of sacrifice as the God Emperor — finally dies to free humanity',phase:'Transcendence'},duncan:{role:'SUPPORTING',arc:'Thousandth ghola iteration, eternal companion across 3500 years',phase:'Transcendence'}}},
+];
+
+const LINKS = [
+  {from:'dn',  to:'dp1', type:'ADAPTATION', label:'Villeneuve adapts Pt 1'},
+  {from:'dn',  to:'dp2', type:'ADAPTATION', label:'Villeneuve adapts Pt 2'},
+  {from:'dn',  to:'df84',type:'ADAPTATION', label:'Lynch adapts novel'},
+  {from:'dn',  to:'dt00',type:'ADAPTATION', label:'TV miniseries adapts novel'},
+  {from:'dp1', to:'dp2', type:'SEQUEL',     label:'Direct sequel'},
+  {from:'dt00',to:'cod03',type:'SEQUEL',   label:'Same production continues'},
+  {from:'dn',  to:'dm',  type:'SEQUEL',     label:'12 years later'},
+  {from:'dm',  to:'codb',type:'SEQUEL',     label:'3 years later'},
+  {from:'dm',  to:'cod03',type:'ADAPTATION',label:'TV covers Messiah + Children'},
+  {from:'codb',to:'ge',  type:'SEQUEL',     label:'3500 years later'},
+];
+
+// ── LAYOUT ────────────────────────────────────────────────────────────────
+const TRACK_Y = {0:90, 1:220, 2:350, 3:480};
+const TRACK_LABELS = {0:'Herbert Novels (Canon Spine)', 1:'Villeneuve Films', 2:'Lynch Film', 3:'TV Miniseries'};
+const TYPE_COLOR = {novel:'#7ec87e', film:'#7eb8f7', tv:'#b07ef7'};
+const TYPE_BG    = {novel:'#1a3a1a', film:'#1a2a4a', tv:'#2a1a4a'};
+const R = 28;
+const X_OFFSET = 80;
+const X_SCALE  = 0.82;
+
+function nodeX(n){ return X_OFFSET + n.sx * X_SCALE; }
+function nodeY(n){ return TRACK_Y[n.track]; }
+
+let activeChar = null;
+let activeNode = null;
+let filterMode = 'all';
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  const svg = document.getElementById('viz');
+  const W = svg.clientWidth || 1100;
+  const H = svg.clientHeight || 580;
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(ns, tag);
+    for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+    if(parent) parent.appendChild(e);
+    return e;
+  }
+
+  // defs: glow filters
+  const defs = el('defs',{},svg);
+  const filt = el('filter',{id:'glow',x:'-40%',y:'-40%',width:'180%',height:'180%'},defs);
+  const blur = el('feGaussianBlur',{stdDeviation:'4',result:'blur'},filt);
+  el('feMerge',{},filt);
+  const fm = defs.querySelector('feMerge');
+  el('feMergeNode',{in:'blur'},fm);
+  el('feMergeNode',{in:'SourceGraphic'},fm);
+
+  // background grid lines
+  for(const [track, y] of Object.entries(TRACK_Y)){
+    el('line',{x1:60,y1:y,x2:W-20,y2:y,stroke:'#ffffff06',strokeWidth:1},svg);
+    el('text',{'x':64,'y':y-10,'class':'track-label'},svg).textContent = TRACK_LABELS[track];
+  }
+
+  // story-time axis
+  const axisY = H - 55;
+  el('line',{x1:X_OFFSET,y1:axisY,x2:W-30,y2:axisY,stroke:'#2a2a3e',strokeWidth:1},svg);
+  const storyMarks = [
+    {sx:300, label:"Dune
+Events"},
+    {sx:560, label:"12 Years
+Later"},
+    {sx:700, label:"Children
+of Dune"},
+    {sx:900, label:"3,500
+Years Later"},
+  ];
+  for(const m of storyMarks){
+    const x = X_OFFSET + m.sx * X_SCALE;
+    el('line',{x1:x,y1:axisY-4,x2:x,y2:axisY+4,stroke:'#3a3a5e',strokeWidth:1},svg);
+    const lines = m.label.split('
+');
+    lines.forEach((l,i) => {
+      const t = el('text',{x:x,y:axisY+16+(i*12),textAnchor:'middle',fontSize:'9',fill:'#444'},svg);
+      t.textContent = l;
+    });
+  }
+  el('text',{x:X_OFFSET,y:axisY+32,fontSize:'9',fill:'#333'},svg).textContent = '← Story Chronology';
+
+  // ── Character threads ──────────────────────────────────────────────────
+  for(const ch of CHARS){
+    // Find all nodes this character appears in, sorted by sx
+    const appearances = NODES.filter(n =>
+      n.chars.includes(ch.id) && nodeVisible(n)
+    ).sort((a,b) => a.sx - b.sx || a.track - b.track);
+
+    if(appearances.length < 2) continue;
+
+    const isActive = activeChar === ch.id;
+    const isFaded  = activeChar && activeChar !== ch.id;
+    const opacity  = isFaded ? 0.04 : isActive ? 1 : 0.18;
+    const sw       = isActive ? 3 : 2;
+
+    // Draw bezier segments between consecutive appearances
+    for(let i=0; i < appearances.length-1; i++){
+      const a = appearances[i], b = appearances[i+1];
+      const x1 = nodeX(a), y1 = nodeY(a);
+      const x2 = nodeX(b), y2 = nodeY(b);
+      const cx1 = x1 + (x2-x1)*0.5;
+      const cx2 = x1 + (x2-x1)*0.5;
+      const path = el('path',{
+        d:`M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`,
+        stroke:ch.color, fill:'none',
+        'stroke-width':sw, opacity:opacity,
+        'stroke-linecap':'round',
+        filter: isActive ? 'url(#glow)' : ''
+      }, svg);
+      path.style.transition = 'opacity .2s';
+    }
+
+    // Character name label on the last node if active
+    if(isActive && appearances.length > 0){
+      const last = appearances[appearances.length-1];
+      el('text',{
+        x: nodeX(last)+R+4, y: nodeY(last)+4,
+        fontSize:'10', fill:ch.color, fontWeight:'600', opacity:'0.9'
+      }, svg).textContent = ch.name;
+    }
+  }
+
+  // ── Title → Title links ──────────────────────────────────────────────
+  for(const lk of LINKS){
+    const a = NODES.find(n=>n.id===lk.from);
+    const b = NODES.find(n=>n.id===lk.to);
+    if(!a||!b||!nodeVisible(a)||!nodeVisible(b)) continue;
+    const x1=nodeX(a),y1=nodeY(a),x2=nodeX(b),y2=nodeY(b);
+    el('line',{x1,y1,x2,y2,stroke:'#ffffff08',strokeWidth:1,strokeDasharray:'4,6'},svg);
+  }
+
+  // ── Nodes ─────────────────────────────────────────────────────────────
+  for(const n of NODES){
+    if(!nodeVisible(n)) continue;
+    const x = nodeX(n), y = nodeY(n);
+    const color = TYPE_COLOR[n.type];
+    const bg    = TYPE_BG[n.type];
+    const isSelected = activeNode === n.id;
+    const isFaded = activeChar && !n.chars.includes(activeChar);
+
+    const g = el('g',{transform:`translate(${x},${y})`,cursor:'pointer',opacity: isFaded?0.2:1},svg);
+    g.style.transition = 'opacity .2s';
+    g.addEventListener('click', ()=>showNode(n.id));
+
+    // outer glow ring for selected
+    if(isSelected){
+      el('circle',{r:R+6, fill:'none', stroke:'#c9a84c', 'stroke-width':2, opacity:.6, filter:'url(#glow)'},g);
+    }
+    // canon ring
+    el('circle',{r:R+2, fill:'none', stroke: n.canon==='hard'?'#c9a84c':'#4466aa', 'stroke-width':n.canon==='hard'?1.5:1, 'stroke-dasharray':n.canon==='hard'?'':'4,3', opacity:.5},g);
+    // main circle
+    el('circle',{r:R, fill:bg, stroke:color, 'stroke-width':1.5},g);
+
+    // label lines
+    const lines = n.label.split('
+');
+    lines.forEach((line,i)=>{
+      const offset = (i - (lines.length-1)/2) * 13;
+      el('text',{x:0,y:offset+3,'text-anchor':'middle',fontSize:9,fill:i===0?'#ddd':'#aaa',fontWeight:i===0?'600':'400'},g).textContent=line;
+    });
+
+    // year badge below
+    el('text',{x:0,y:R+14,'text-anchor':'middle',fontSize:8,fill:'#555'},g).textContent=n.yr||n.y65;
+
+    // character dots on the rim
+    const charsHere = n.chars.slice(0,8);
+    charsHere.forEach((cid,i)=>{
+      const angle = (i / charsHere.length) * Math.PI * 2 - Math.PI/2;
+      const dx = Math.cos(angle)*(R+14);
+      const dy = Math.sin(angle)*(R+14);
+      const ch = CHARS.find(c=>c.id===cid);
+      if(!ch) return;
+      const dot = el('circle',{cx:dx,cy:dy,r:3.5,fill:ch.color,cursor:'pointer',opacity: activeChar===cid?1:0.5},g);
+      dot.addEventListener('click',e=>{e.stopPropagation();selectChar(cid);});
+    });
+  }
+}
+
+function nodeVisible(n){
+  if(filterMode==='all') return true;
+  if(filterMode==='hard') return n.canon==='hard';
+  if(filterMode==='novel') return n.type==='novel';
+  if(filterMode==='film') return n.type==='film';
+  if(filterMode==='tv') return n.type==='tv';
+  return true;
+}
+
+function showNode(id){
+  activeNode = id;
+  activeChar = null;
+  render();
+  renderCharList();
+  const n = NODES.find(x=>x.id===id);
+  const color = TYPE_COLOR[n.type];
+  const typeLabel = {novel:'📚 Novel',film:'🎬 Film',tv:'📺 TV Series'}[n.type];
+  const canonBadge = n.canon==='hard'
+    ? '<span class="badge hc">Hard Canon</span>'
+    : '<span class="badge" style="color:#7eb8f7">Soft Canon</span>';
+
+  const charItems = n.chars.map(cid=>{
+    const ch=CHARS.find(x=>x.id===cid);
+    const app=n.arcs[cid];
+    if(!ch||!app) return '';
+    return `<div class="citem" onclick="selectChar('${cid}')">
+      <div class="dot" style="background:${ch.color};flex-shrink:0"></div>
+      <div><div class="cname">${ch.name}</div><div class="carc">${app.arc}</div></div>
+      <div class="crole">${app.role}</div>
+    </div>`;
+  }).join('');
+
+  const relLinks = LINKS.filter(l=>l.from===id||l.to===id).map(l=>{
+    const otherId = l.from===id?l.to:l.from;
+    const other = NODES.find(x=>x.id===otherId);
+    if(!other) return '';
+    const dir = l.from===id ? '→' : '←';
+    return `<div class="arc-stop" style="border-color:#333;cursor:pointer" onclick="showNode('${otherId}')">
+      <div class="ast-title">${dir} ${other.label.replace('
+',' ')}</div>
+      <div class="ast-meta" style="color:#c9a84c">${l.type} · ${l.label}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pc').innerHTML = `
+    <button class="xbtn" onclick="closePanel()">✕</button>
+    <h2>${n.label.replace('
+',' ')}</h2>
+    <div class="pmeta"><span>${n.yr||n.y65}</span><span>${typeLabel}</span>${canonBadge}<span style="color:#666">${n.creator}</span></div>
+    <div class="sec"><h4>Synopsis</h4><p style="font-size:11px;color:#aaa;line-height:1.6">${n.synopsis}</p></div>
+    <div class="sec"><h4>Characters — click to trace franchise arc</h4>${charItems}</div>
+    ${relLinks?`<div class="sec"><h4>Connected Titles</h4>${relLinks}</div>`:''}
+  `;
+  document.getElementById('panel').classList.remove('hide');
+}
+
+function selectChar(id){
+  activeChar = activeChar===id ? null : id;
+  activeNode = null;
+  renderCharList();
+  if(activeChar){
+    const ch = CHARS.find(x=>x.id===id);
+    const appearances = NODES.filter(n=>n.chars.includes(id)&&nodeVisible(n)).sort((a,b)=>a.sx-b.sx);
+    const stops = appearances.map(n=>{
+      const app=n.arcs[id];
+      const color = TYPE_COLOR[n.type];
+      return `<div class="arc-stop" style="border-color:${color}" onclick="showNode('${n.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="ast-title">${n.label.replace('
+',' ')}</div>
+          <div class="ast-meta">${n.yr||n.y65}</div>
+        </div>
+        <div class="ast-meta" style="color:${ch.color}">${app?.role||''} · ${app?.phase||''}</div>
+        <div class="ast-arc">${app?.arc||''}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('pc').innerHTML = `
+      <button class="xbtn" onclick="closePanel()">✕</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:14px;height:14px;border-radius:50%;background:${ch.color}"></div>
+        <h2 style="color:${ch.color}">${ch.name}</h2>
+      </div>
+      ${ch.aliases.length?`<div class="pmeta">aka: ${ch.aliases.join(', ')}</div>`:''}
+      <div class="pmeta">${appearances.length} titles across the franchise</div>
+      <div class="sec"><h4>About</h4><p style="font-size:11px;color:#aaa;line-height:1.5">${ch.desc}</p></div>
+      <div class="sec"><h4>Franchise Arc — click any title for details</h4>${stops}</div>
+    `;
+    document.getElementById('panel').classList.remove('hide');
+  } else {
+    document.getElementById('panel').classList.add('hide');
+  }
+  render();
+}
+
+function closePanel(){
+  activeChar=null; activeNode=null;
+  document.getElementById('panel').classList.add('hide');
+  render(); renderCharList();
+}
+
+function setFilter(mode, btn){
+  filterMode=mode;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  render();
+}
+
+function renderCharList(){
+  const container = document.getElementById('char-list');
+  container.innerHTML = CHARS.map(ch=>{
+    const count = NODES.filter(n=>n.chars.includes(ch.id)&&nodeVisible(n)).length;
+    const cls = activeChar===ch.id ? 'ch active' : activeChar&&activeChar!==ch.id ? 'ch dimmed' : 'ch';
+    return `<div class="${cls}" onclick="selectChar('${ch.id}')">
+      <div class="dot" style="background:${ch.color}"></div>
+      <div class="ch-info">
+        <div class="name">${ch.name}</div>
+        <div class="sub">${count} titles</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.addEventListener('resize', render);
+renderCharList();
+render();
+</script>
+</body></html>
