@@ -184,7 +184,7 @@ const TBG={novel:"#1a3a1a",film:"#1a2a4a",tv:"#2a1a4a"};
 const ns="http://www.w3.org/2000/svg";
 function mkEl(tag,a,p){const e=document.createElementNS(ns,tag);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));if(p)p.appendChild(e);return e;}
 
-let activeChar=null;
+let activeChar=null, activeChar2=null;
 const tip=document.getElementById("tip");
 
 function render(){
@@ -227,8 +227,8 @@ function render(){
   CHARS.forEach(ch=>{
     const apps=TITLES.filter(t=>ch.arc&&ch.arc[t.id]);
     if(apps.length<2)return;
-    const isOn=activeChar===ch.id;
-    const isDim=activeChar&&activeChar!==ch.id;
+    const isOn=activeChar===ch.id || activeChar2===ch.id;
+    const isDim=(activeChar||activeChar2) && !isOn;
     const op=isDim?0.025:isOn?1:0.18;
     const sw=isOn?3:1.5;
 
@@ -445,7 +445,14 @@ function renderList(){
   }).join("");
 }
 
-window.toggleCh=function(id){activeChar=activeChar===id?null:id;render();renderList();showPanel();};
+window.toggleCh=function(id){
+  if(!activeChar){ activeChar=id; }
+  else if(activeChar===id){ activeChar=null; activeChar2=null; }
+  else if(!activeChar2){ activeChar2=id; }
+  else if(activeChar2===id){ activeChar2=null; }
+  else { activeChar2=id; }
+  render(); renderList(); showPanel();
+};
 window.addEventListener("resize",render);
 renderList();
 render();
