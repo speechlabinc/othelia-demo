@@ -413,13 +413,34 @@ function showPanel(){
 window.closePanel=function(){activeChar=null;document.getElementById("story-panel").classList.remove("open");render();renderList();};
 
 function renderList(){
-  document.getElementById("clist").innerHTML=CHARS.map(ch=>{
+  const ch1 = activeChar ? CHARS.find(c=>c.id===activeChar) : null;
+  const ch2 = activeChar2 ? CHARS.find(c=>c.id===activeChar2) : null;
+  const slot1 = ch1
+    ? `<div onclick="toggleCh('${ch1.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#0d0d18;border-radius:6px;border:1.5px solid ${ch1.color};cursor:pointer"><div style="width:8px;height:8px;border-radius:50%;background:${ch1.color}"></div><span style="font-size:10px;font-weight:600;color:${ch1.color};flex:1">${ch1.name.split(" ")[0]}</span><span style="font-size:9px;color:#444">&#10005;</span></div>`
+    : `<div style="padding:5px 8px;background:#0d0d18;border-radius:6px;border:1px dashed #2a2a3e;font-size:9px;color:#333;text-align:center">+ Click to select</div>`;
+  const slot2 = ch2
+    ? `<div onclick="toggleCh('${ch2.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#0d0d18;border-radius:6px;border:1.5px solid ${ch2.color};cursor:pointer"><div style="width:8px;height:8px;border-radius:50%;background:${ch2.color}"></div><span style="font-size:10px;font-weight:600;color:${ch2.color};flex:1">${ch2.name.split(" ")[0]}</span><span style="font-size:9px;color:#444">&#10005;</span></div>`
+    : `<div style="padding:5px 8px;background:#0d0d18;border-radius:6px;border:1px dashed #2a2a3e;font-size:9px;color:${ch1?"#c9a84c66":"#333"};text-align:center">${ch1?"+ Click to compare":"+ Click to select"}</div>`;
+
+  const hdr = `<div style="padding:8px 10px 8px;border-bottom:1px solid #1a1a2e;margin-bottom:4px">
+    <div style="font-size:9px;color:#c9a84c;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px">&#9654; Compare Two Characters</div>
+    <div style="display:flex;flex-direction:column;gap:3px">${slot1}${slot2}</div>
+    ${ch1&&ch2?`<div style="font-size:8px;color:#555;margin-top:5px;text-align:center">Side-by-side arcs + relationship story &rarr;</div>`:""}
+    ${ch1&&ch2?`<button onclick="closePanel()" style="width:100%;margin-top:4px;padding:3px;border-radius:4px;border:1px solid #2a2a3e;background:transparent;color:#444;font-size:9px;cursor:pointer">Clear all</button>`:""}
+  </div><div style="padding:0 10px 4px;font-size:9px;color:#333">Characters</div>`;
+
+  document.getElementById("clist").innerHTML = hdr + CHARS.map(ch=>{
     const count=TITLES.filter(t=>ch.arc&&ch.arc[t.id]).length;
-    const isOn=activeChar===ch.id;
-    return `<div class="ch ${isOn?"on":""}" onclick="toggleCh('${ch.id}')">
-      <div class="dot" style="background:${ch.color};${isOn?"outline:2px solid "+ch.color+"66;outline-offset:1px":""}"></div>
-      <div><div class="cn" style="color:${isOn?ch.color:"inherit"}">${ch.name}</div>
-      <div class="cc">${count} titles${isOn?" &bull; active":""}</div></div>
+    const is1=activeChar===ch.id, is2=activeChar2===ch.id;
+    const color=is1?ch.color:is2?ch.color:"inherit";
+    return `<div class="ch ${(is1||is2)?"on":""}" onclick="toggleCh('${ch.id}')">
+      <div style="position:relative;flex-shrink:0">
+        <div class="dot" style="background:${ch.color};${(is1||is2)?"outline:2px solid "+ch.color+"55;outline-offset:1px":""}"></div>
+        ${is1?`<span style="position:absolute;top:-5px;right:-5px;background:${ch.color};color:#000;font-size:7px;font-weight:900;width:11px;height:11px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1">1</span>`:""}
+        ${is2?`<span style="position:absolute;top:-5px;right:-5px;background:${ch.color};color:#000;font-size:7px;font-weight:900;width:11px;height:11px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1">2</span>`:""}
+      </div>
+      <div><div class="cn" style="color:${color}">${ch.name}</div>
+      <div class="cc">${count} titles${is1?" &bull; slot 1":is2?" &bull; slot 2":""}</div></div>
     </div>`;
   }).join("");
 }
