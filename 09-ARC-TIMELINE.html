@@ -388,6 +388,57 @@ function showPanel(){
   const inner=document.getElementById("sp-inner");
   if(!activeChar){panel.classList.remove("open");return;}
   panel.classList.add("open");
+
+  // COMPARISON MODE — two chars selected
+  if(activeChar && activeChar2){
+    const ch1=CHARS.find(c=>c.id===activeChar);
+    const ch2=CHARS.find(c=>c.id===activeChar2);
+    if(!ch1||!ch2)return;
+    const relKey=getRelKey(activeChar,activeChar2);
+    const sharedTitles=TITLES.filter(t=>ch1.arc&&ch1.arc[t.id]&&ch2.arc&&ch2.arc[t.id]).sort((a,b)=>a.sx-b.sx);
+
+    // Build relationship evolution as a narrative timeline
+    const relCards=sharedTitles.map(t=>{
+      const a1=ch1.arc[t.id], a2=ch2.arc[t.id];
+      const color=TCOLOR[t.type];
+      const icon={novel:"\u{1F4DA}",film:"\u{1F3AC}",tv:"\u{1F4FA}"}[t.type];
+      const relData=relKey&&REL[relKey]&&REL[relKey][t.id];
+      return `<div class="ac" style="border-color:${color};margin-bottom:10px">
+        <div class="ac-hdr"><div class="ac-t" style="font-size:11px;font-weight:700;color:#ddd">${t.name}</div><div class="ac-yr">${t.yr}</div></div>
+        ${relData?`<div style="padding:7px 9px;margin:6px 0;background:#c9a84c10;border-radius:5px;border-left:2px solid #c9a84c">
+          <div style="font-size:9px;color:#c9a84c;font-weight:700;margin-bottom:3px">${relData.label.toUpperCase()}</div>
+          <div style="font-size:10px;color:#ccc;line-height:1.55">${relData.story}</div>
+        </div>`:`<div style="font-size:9px;color:#444;padding:4px 0">No relationship data for this title</div>`}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px">
+          <div style="padding:5px 7px;background:#0a0a18;border-radius:4px;border-left:2px solid ${ch1.color}">
+            <div style="font-size:8px;color:${ch1.color};font-weight:700">${ch1.name.split(" ")[0]}: ${a1.phase}</div>
+            <div style="font-size:9px;color:#888;line-height:1.4;margin-top:2px">${a1.story.slice(0,100)}...</div>
+          </div>
+          <div style="padding:5px 7px;background:#0a0a18;border-radius:4px;border-left:2px solid ${ch2.color}">
+            <div style="font-size:8px;color:${ch2.color};font-weight:700">${ch2.name.split(" ")[0]}: ${a2.phase}</div>
+            <div style="font-size:9px;color:#888;line-height:1.4;margin-top:2px">${a2.story.slice(0,100)}...</div>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+
+    inner.innerHTML=`
+      <button onclick="closePanel()" style="float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px">&#10005;</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${ch1.color}"></div>
+        <span style="font-size:13px;font-weight:700;color:${ch1.color}">${ch1.name}</span>
+        <span style="font-size:11px;color:#444">+</span>
+        <div style="width:10px;height:10px;border-radius:50%;background:${ch2.color}"></div>
+        <span style="font-size:13px;font-weight:700;color:${ch2.color}">${ch2.name}</span>
+      </div>
+      <div style="font-size:10px;color:#555;margin-bottom:12px">${sharedTitles.length} shared titles &mdash; relationship evolves below</div>
+      <div style="font-size:9px;color:#444;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">How their relationship evolves</div>
+      ${relCards||'<div style="font-size:11px;color:#555">No shared titles found.</div>'}
+    `;
+    return;
+  }
+
+  // SINGLE CHARACTER MODE
   const ch=CHARS.find(c=>c.id===activeChar);
   if(!ch)return;
   const tWC=TITLES.filter(t=>ch.arc&&ch.arc[t.id]).sort((a,b)=>a.sx-b.sx);
@@ -407,7 +458,8 @@ function showPanel(){
     <div class="sp-name" style="color:${ch.color}">${ch.name}</div>
     <div class="sp-aliases">${ch.aliases.length?"aka: "+ch.aliases.join(", "):""}</div>
     <div class="sp-summary" style="border-color:${ch.color}">${ch.summary}</div>
-    <div><div style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${tWC.length} titles across the franchise</div>${cards}</div>`;
+    <div style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Select a 2nd character to compare relationship</div>
+    <div>${cards}</div>`;
 }
 
 window.closePanel=function(){activeChar=null;document.getElementById("story-panel").classList.remove("open");render();renderList();};
