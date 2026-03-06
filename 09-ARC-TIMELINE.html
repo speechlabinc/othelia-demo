@@ -179,6 +179,69 @@ const TITLES = [
   {id:"codb",name:"Children",       sx:7, yr:1976, type:"novel", canon:"hard"},
   {id:"ge",  name:"God Emperor",    sx:8, yr:1981, type:"novel", canon:"hard"},
 ];
+const REL = {
+  "paul+chani":{
+    dp1:{label:"Recognition",story:"Paul sees Chani in prescient visions before they meet. She is skeptical of outsiders and their prophecies. There is recognition but no certainty between them."},
+    dn: {label:"Partners",story:"Chani becomes Paul's Fremen partner fully. She is his anchor to genuine humanity amid the growing religious fervor around him."},
+    dp2:{label:"Fracture",story:"Villeneuve's most significant deviation: Chani refuses to accept Paul's messianic role. She loves the man but rejects the myth. When he embraces the Jihad, she rides away."},
+    dm: {label:"Loss",story:"Chani dies giving birth to their twins — the death Paul foresaw and could not prevent. Her loss destroys his will to remain emperor."},
+    df84:{label:"Love",story:"Lynch portrays their bond simply and warmly, less politically complex than Herbert intended."},
+    dt00:{label:"Partners",story:"The miniseries portrays their partnership with desert authenticity, staying close to Herbert."},
+  },
+  "paul+jessica":{
+    dp1:{label:"Survival",story:"Mother and son navigate Arrakis together after the betrayal. Jessica's training keeps them alive. Paul is starting to see further than she can guide him."},
+    dn: {label:"Complex bond",story:"The novel explores their relationship fully: Jessica loves Paul but is also a Bene Gesserit agent following orders she only partly understands."},
+    dp2:{label:"Growing distance",story:"Villeneuve makes Jessica's agenda explicit — she actively promotes Paul's messianic role. Paul begins to see her manipulation. Love and agenda become inseparable."},
+    df84:{label:"Noble family",story:"Lynch's Jessica is defined by family loyalty. Less of the Bene Gesserit complexity from the novel."},
+    dt00:{label:"Strong bond",story:"The miniseries gives Jessica more agency, showing her active steering toward an uncertain goal."},
+  },
+  "paul+duncan":{
+    dp1:{label:"Brothers",story:"Duncan is Paul's closest friend and finest warrior. He dies holding off Sardaukar troops to buy Paul time to escape. His sacrifice haunts Paul for the rest of the saga."},
+    dn: {label:"Loyalty",story:"The novel establishes Duncan as the ideal Atreides warrior: skilled, loyal, warm. His death is the first real cost Paul pays."},
+    dp2:{label:"Memory",story:"Duncan is present in Paul's memories. His sacrifice continues to define Paul's sense of what loyalty costs."},
+    dm: {label:"Resurrection",story:"Duncan is resurrected as a Ghola programmed to kill Paul. Paul's genuine love forces him to recover his memories. He dies rather than betray his friend."},
+    codb:{label:"Identity",story:"Second ghola. Duncan's resurrection raises questions of identity — is this the same person if grown in an axolotl tank with implanted memories?"},
+    ge: {label:"Eternal test",story:"3500 years of ghola cycles. Leto II keeps resurrecting Duncan as humanity's test of rebellion. The bond spans millennia."},
+    df84:{label:"Brothers",story:"Lynch's version shows their warmth briefly before the sacrifice. The death lands emotionally despite the compression."},
+    dt00:{label:"Commander",story:"The miniseries gives Duncan more time before his sacrifice, earning the emotional weight of his death."},
+  },
+  "paul+stilgar":{
+    dp1:{label:"Skeptic",story:"Stilgar takes Paul in reluctantly. He recognizes abilities but is skeptical of outsiders. Trust is earned slowly."},
+    dn: {label:"Earned respect",story:"By the end of the novel, Stilgar is fully committed to Paul. Traditional Fremen authority now serves the new cause."},
+    dp2:{label:"Devotion",story:"Stilgar has become Paul's most devoted follower, interpreting his offhand comments as divine wisdom. Moving and unsettling in equal measure."},
+    dm: {label:"Unbreakable",story:"Remains loyal through Paul's troubled emperorship. Sees Paul's abdication as the final act of a great leader."},
+    codb:{label:"Horror",story:"Serving Paul's children now. Watches Alia's possession with horror. Devotion conflicts with what he knows is happening."},
+    df84:{label:"Warriors",story:"Lynch's Stilgar is fierce and efficient — the Fremen code conveyed directly."},
+    dt00:{label:"Chief",story:"The miniseries develops his relationship with Paul over time, making his later devotion feel earned."},
+  },
+  "jessica+baron":{
+    dn: {label:"Absolute hatred",story:"The Baron orchestrated the destruction of House Atreides — killing Jessica's lover Duke Leto. She survived by Bene Gesserit training alone."},
+    dp1:{label:"The architect",story:"The Baron's plan set everything Jessica and Paul must endure in motion. He is the architect of her grief."},
+    dp2:{label:"Structural",story:"Jessica does not confront the Baron directly — her promotion of Paul's rise is in part revenge made political."},
+  },
+  "alia+baron":{
+    dp2:{label:"Born knowing",story:"Alia is born fully conscious — already carrying the Baron's memory. She kills him as a toddler. The murderer killed by the murdered's descendent before she has words for it."},
+    dm: {label:"Pressure builds",story:"The Baron's presence in Alia's ancestral memory is already a danger — a dominant personality that could overwhelm her."},
+    codb:{label:"Possession",story:"The Baron's consciousness takes over Alia entirely. The man who destroyed House Atreides conquers it from within through the body of Paul's sister."},
+  },
+  "paul+baron":{
+    dp1:{label:"Unseen enemy",story:"The Baron destroyed Paul's family through proxies. Paul knows who ordered his father's death. They never face each other directly in Part One."},
+    dn: {label:"Axis of conflict",story:"Paul is the loose end the Baron did not eliminate. Their conflict is the structural axis of the entire story."},
+    dp2:{label:"Proxy war",story:"Paul's rise is in direct opposition to Harkonnen power. The Baron dies by Alia's hand, not Paul's."},
+  },
+  "chani+stilgar":{
+    dp1:{label:"Fremen kin",story:"Chani and Stilgar are both Fremen of Sietch Tabr. Trust and shared cultural identity before Paul ever arrives."},
+    dn: {label:"Fremen family",story:"They share desert life, skepticism of outsiders, pride in Fremen independence."},
+    dp2:{label:"Divergence",story:"By Part Two, Stilgar is a true believer while Chani refuses the prophecy. Two Fremen who grew up together on opposite sides of the same question."},
+  },
+};
+
+function getRelKey(id1, id2) {
+  const pairs = [id1+"+"+id2, id2+"+"+id1];
+  for (const p of pairs) { if (REL[p]) return p; }
+  return null;
+}
+
 const TCOLOR={novel:"#7ec87e",film:"#7eb8f7",tv:"#b07ef7"};
 const TBG={novel:"#1a3a1a",film:"#1a2a4a",tv:"#2a1a4a"};
 const ns="http://www.w3.org/2000/svg";
