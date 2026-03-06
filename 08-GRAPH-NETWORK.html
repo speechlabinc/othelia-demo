@@ -1,18 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<script>
-(function(){
-  var k = sessionStorage.getItem("othelia_auth");
-  if(k !== "ok"){
-    var p = prompt("Enter password to access this demo:");
-    if(p !== "othelia!@#!"){
-      document.body.innerHTML = "<div style=\"height:100vh;display:flex;align-items:center;justify-content:center;background:#060610;color:#555;font-family:sans-serif\">Access denied.</div>";
-      return;
-    }
-    sessionStorage.setItem("othelia_auth","ok");
-  }
-})();
-</script><meta charset="UTF-8">
+<html lang="en"><head><meta charset="UTF-8">
 <title>Othelia — Network Graph</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -144,7 +131,12 @@ function buildGraph() {
     });
   }
   if (mode !== "chars") {
-    LINKS.forEach(l => links.push({source:l.s, target:l.t, cid:null, color:"#ffffff10", dashed:true}));
+    LINKS.forEach(l => links.push({
+      source:l.s, target:l.t, cid:null,
+      color: l.type==="SEQUEL" ? "#7eb8f7cc" : l.type==="ADAPTATION" ? "#c9a84ccc" : "#b07ef7cc",
+      ltype: l.type,
+      dashed: false
+    }));
   }
   return {nodes, links};
 }
@@ -164,12 +156,20 @@ function init() {
   const g = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.2,4]).on("zoom", e => g.attr("transform", e.transform)));
 
-  gLink = g.append("g").selectAll("line").data(links).join("line")
+  // Draw edges as path + label group
+  const gLinkGroup = g.append("g");
+  gLink = gLinkGroup.selectAll("line").data(links).join("line")
     .attr("stroke", d => d.color)
-    .attr("stroke-width", d => d.dashed ? 1 : 1.5)
-    .attr("stroke-dasharray", d => d.dashed ? "4,6" : null)
-    .attr("opacity", d => d.dashed ? 0.4 : 0.25)
-    .attr("fill", "none");
+    .attr("stroke-width", d => d.cid ? 1.5 : 2.5)
+    .attr("stroke-dasharray", null)
+    .attr("opacity", d => d.cid ? 0.3 : 0.85)
+    .attr("fill", "none")
+    .attr("marker-end", d => !d.cid ? "url(#tarr)" : null);
+
+  // Edge label groups for title-title links only
+  const gEdgeLabels = gLinkGroup.selectAll("g.elbl").data(links.filter(l=>!l.cid)).join("g").attr("class","elbl");
+  gEdgeLabels.append("rect").attr("rx",3).attr("height",12).attr("fill","#0a0a18").attr("opacity",.85);
+  gEdgeLabels.append("text").attr("font-size",8).attr("fill", d=>d.color).attr("font-weight","600").attr("text-anchor","middle");
 
   gNode = g.append("g").selectAll("g").data(nodes).join("g")
     .attr("cursor","pointer")
@@ -199,13 +199,22 @@ function init() {
   });
 
   sim = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d=>d.id).distance(d => d.cid ? 90 : 160).strength(d => d.cid ? 0.4 : 0.15))
-    .force("charge", d3.forceManyBody().strength(d => d.type==="title" ? -700 : -300))
+    .force("link", d3.forceLink(links).id(d=>d.id).distance(d => d.cid ? 100 : 200).strength(d => d.cid ? 0.35 : 0.1))
+    .force("charge", d3.forceManyBody().strength(d => d.type==="title" ? -900 : -400))
     .force("center", d3.forceCenter(w/2, h/2))
     .force("collide", d3.forceCollide(d => d.r+22))
     .on("tick", () => {
       gLink.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
       gNode.attr("transform", d => `translate(${d.x},${d.y})`);
+      // Update edge label positions
+      gEdgeLabels.attr("transform", d => {
+        const sx=typeof d.source==="object"?d.source.x:0, sy=typeof d.source==="object"?d.source.y:0;
+        const tx=typeof d.target==="object"?d.target.x:0, ty=typeof d.target==="object"?d.target.y:0;
+        return `translate(${(sx+tx)/2},${(sy+ty)/2})`;
+      });
+      gEdgeLabels.select("text").text(d=>d.ltype||"");
+      gEdgeLabels.select("rect").attr("width", d=>(d.ltype||"").length*5+10).attr("x", d=>-((d.ltype||"").length*5+10)/2).attr("y",-9);
+      gEdgeLabels.select("text").attr("y",-1);
     });
 }
 
