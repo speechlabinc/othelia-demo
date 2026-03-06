@@ -1,0 +1,220 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Change Cascade</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+a.back{font-size:11px;color:#555;text-decoration:underline;margin-left:auto}
+a.back:hover{color:#c9a84c}
+.banner{padding:6px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.pill{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600}
+.wrap{flex:1;display:flex;overflow:hidden}
+#canvas{flex:1;position:relative}
+svg{width:100%;height:100%}
+.panel{width:0;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;padding:0;flex-shrink:0;transition:width .2s}
+.panel.open{width:270px}
+.pi{padding:16px;min-width:270px}
+.pi h2{font-size:13px;color:#c9a84c;margin-bottom:6px}
+.pi p{font-size:11px;color:#888;line-height:1.6;margin-bottom:10px}
+.impact-item{padding:6px 10px;border-radius:5px;margin-bottom:5px;font-size:10px}
+.legend{padding:7px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:14px;font-size:10px;color:#444;align-items:center;flex-shrink:0}
+.li{display:flex;align-items:center;gap:5px}
+.lc{width:10px;height:10px;border-radius:50%;display:inline-block}
+.instructions{position:absolute;top:16px;left:50%;transform:translateX(-50%);font-size:11px;color:#333;background:#0d0d18;padding:8px 16px;border-radius:20px;border:1px solid #1e1e2e;pointer-events:none}
+</style></head>
+<body>
+<header>
+<div class="logo">&#x2B21; CHANGE CASCADE SIMULATOR</div>
+<span style="font-size:10px;color:#333">Click any story element to see what breaks &mdash; the $1.5M insurance policy</span>
+<a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back</a>
+</header>
+<div class="banner">
+  <span>&#9432; Solves: <strong style="color:#ddd">Story Change Cascades</strong> (P2) &mdash; see blast radius before committing budget.</span>
+  <span class="pill" style="background:#c9a84c18;border:1px solid #c9a84c33;color:#c9a84c">FranchiseTitle.TitleLink</span>
+  <span class="pill" style="background:#80c06018;border:1px solid #80c06033;color:#80c060">CharacterAppearance</span>
+  <span class="pill" style="background:#e0606018;border:1px solid #e0606033;color:#e06060">Entity dependency edges</span>
+</div>
+<div class="wrap">
+<div id="canvas"><svg id="svg"></svg>
+<div class="instructions" id="inst">Click any node to simulate &ldquo;What if we change this?&rdquo;</div>
+</div>
+<div class="panel" id="panel">
+  <div class="pi" id="pi">
+    <button onclick="clearSel()" style="float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px">&#10005;</button>
+    <h2 id="pi-title"></h2>
+    <p id="pi-desc"></p>
+    <div id="pi-impacts"></div>
+  </div>
+</div>
+</div>
+<div class="legend">
+  <div class="li"><div class="lc" style="background:#c9a84c"></div>Story Event / Prophecy</div>
+  <div class="li"><div class="lc" style="background:#f0c040"></div>Character</div>
+  <div class="li"><div class="lc" style="background:#7eb8f7"></div>Location / Faction</div>
+  <div class="li"><div class="lc" style="background:#e06060"></div>Cascade impact</div>
+  <div class="li" style="margin-left:auto">Node size = number of story elements that depend on it</div>
+</div>
+<script>
+const NODES=[
+  {id:"paul_choice",label:"Paul chooses\nthe Jihad",type:"event",r:28,desc:"Paul embraces the messianic role knowing it will cause billions of deaths. Every downstream story element in the franchise depends on this choice.",impacts:["chani_leaves","jihad_kills","alia_born","stilgar_belief","empire_falls"]},
+  {id:"duke_death",label:"Duke Leto\ndies",type:"event",r:24,desc:"House Atreides falls. The death that sets Paul and Jessica on the desert path.",impacts:["paul_choice","jessica_mother","gurney_exile","duncan_sacrifice"]},
+  {id:"duncan_sacrifice",label:"Duncan\nsacrifice",type:"event",r:20,desc:"Duncan Idaho dies protecting Paul and Jessica. His sacrifice echoes across 3,500 years of ghola resurrections.",impacts:["ghola_program","paul_loss","atreides_escape"]},
+  {id:"spice_agony",label:"Spice\nAgony",type:"event",r:22,desc:"Paul survives the Water of Life test. His prescience becomes fully activated. He can see the future — including the Jihad he cannot stop.",impacts:["paul_choice","alia_born","jessica_mother","fremen_follow"]},
+  {id:"atreides_escape",label:"Desert\nescape",type:"event",r:18,desc:"Paul and Jessica survive in the desert. Everything after depends on them not dying here.",impacts:["fremen_follow","paul_choice","chani_meets"]},
+  {id:"chani_meets",label:"Paul meets\nChani",type:"event",r:20,desc:"Paul recognizes Chani from his visions. Their relationship becomes the emotional core of the saga.",impacts:["chani_leaves","twins_born","fremen_follow"]},
+  {id:"jihad_kills",label:"Jihad:\n61 billion",type:"event",r:26,desc:"The holy war fought in Paul's name kills 61 billion people across the universe. The most consequential event in the saga.",impacts:["paul_abdicates","fremen_culture","empire_falls"]},
+  {id:"chani_leaves",label:"Chani\nrejects Paul",type:"event",r:18,desc:"Chani rides into the desert rather than accept Paul's messianic role. The most honest ending in the saga.",impacts:[]},
+  {id:"alia_born",label:"Alia born\npre-born",type:"event",r:20,desc:"Alia is born fully conscious with ancestral memories. Her existence is both miracle and tragedy.",impacts:["baron_kills","alia_possession"]},
+  {id:"baron_kills",label:"Alia kills\nBaron",type:"event",r:16,desc:"The Baron killed by Paul's toddler sister. House Harkonnen ends.",impacts:[]},
+  {id:"alia_possession",label:"Alia\npossessed",type:"event",r:22,desc:"The Baron's consciousness overwhelms Alia's mind. She becomes a tyrant and throws herself from a window.",impacts:["paul_abdicates"]},
+  {id:"paul_abdicates",label:"Paul\nabdicates",type:"event",r:20,desc:"Paul walks into the desert as a blind man, abdicating the throne. Becomes the Preacher.",impacts:["leto2_path"]},
+  {id:"leto2_path",label:"Leto II\nGolden Path",type:"event",r:24,desc:"Paul's son merges with sandtrout and begins 3,500 years of absolute rule to save humanity from extinction.",impacts:["ghola_program","empire_falls"]},
+  {id:"ghola_program",label:"Ghola\nresurrections",type:"event",r:22,desc:"Leto II keeps resurrecting Duncan Idaho. The program spans 3,500 years and is humanity's ongoing test of rebellion.",impacts:[]},
+  {id:"empire_falls",label:"Empire\ncollapses",type:"event",r:24,desc:"After Leto II's death, the empire shatters and humanity scatters across the stars — the point of the Golden Path.",impacts:[]},
+  // Characters
+  {id:"paul",label:"Paul\nAtreides",type:"char",r:26,desc:"The central character whose choices drive the entire saga. Every major story element connects to Paul.",impacts:["paul_choice","spice_agony","chani_meets","paul_abdicates"]},
+  {id:"jessica",label:"Lady\nJessica",type:"char",r:20,desc:"Her decision to bear a son instead of a daughter set the messianic bloodline in motion. Everything downstream traces back to her disobedience.",impacts:["paul_choice","alia_born","spice_agony"]},
+  {id:"jessica_mother",label:"Jessica becomes\nR.Mother",type:"event",r:16,desc:"Jessica drinks the Water of Life while pregnant with Alia — making both of them prescient and beginning the Fremen Reverend Mother transformation.",impacts:["alia_born","fremen_follow"]},
+  {id:"fremen_follow",label:"Fremen\nfollow Paul",type:"event",r:20,desc:"The Fremen accept Paul as their promised messiah. Without their armies, Paul cannot defeat the Emperor.",impacts:["jihad_kills","paul_choice"]},
+  {id:"stilgar_belief",label:"Stilgar\nbelieves",type:"event",r:16,desc:"Stilgar's complete devotion to Paul becomes a symbol of how the messianic myth transforms even the wisest people.",impacts:[]},
+  {id:"twins_born",label:"Leto + Ghanima\nborn",type:"event",r:18,desc:"Paul's twins carry his prescience. Chani dies giving birth — the death Paul foresaw and could not stop.",impacts:["paul_abdicates","leto2_path"]},
+  {id:"gurney_exile",label:"Gurney\nexile",type:"event",r:14,desc:"Gurney Halleck survives the Harkonnen massacre and eventually reunites with Paul among the Fremen.",impacts:["atreides_escape"]},
+  // Locations
+  {id:"arrakis",label:"Arrakis /\nSpice",type:"loc",r:24,desc:"The spice melange is the most valuable substance in the universe. Whoever controls Arrakis controls the empire. All political conflict flows through this.",impacts:["duke_death","spice_agony","fremen_follow","jihad_kills"]},
+  {id:"sietch_tabr",label:"Sietch\nTabr",type:"loc",r:16,desc:"The Fremen sietch where Paul builds his power base. The cave system becomes the headquarters of the revolution.",impacts:["fremen_follow","paul_choice"]},
+];
+
+const EDGES=[
+  {s:"arrakis",t:"duke_death"},{s:"arrakis",t:"spice_agony"},{s:"arrakis",t:"paul_choice"},
+  {s:"duke_death",t:"atreides_escape"},{s:"duke_death",t:"duncan_sacrifice"},
+  {s:"atreides_escape",t:"chani_meets"},{s:"atreides_escape",t:"fremen_follow"},
+  {s:"spice_agony",t:"paul_choice"},{s:"jessica_mother",t:"alia_born"},
+  {s:"paul_choice",t:"jihad_kills"},{s:"paul_choice",t:"chani_leaves"},{s:"paul_choice",t:"alia_born"},
+  {s:"alia_born",t:"baron_kills"},{s:"alia_born",t:"alia_possession"},
+  {s:"jihad_kills",t:"paul_abdicates"},{s:"paul_abdicates",t:"leto2_path"},
+  {s:"leto2_path",t:"ghola_program"},{s:"leto2_path",t:"empire_falls"},
+  {s:"fremen_follow",t:"paul_choice"},{s:"chani_meets",t:"twins_born"},
+  {s:"twins_born",t:"paul_abdicates"},{s:"duncan_sacrifice",t:"ghola_program"},
+];
+
+const TYPE_COLOR={event:"#c9a84c",char:"#f0c040",loc:"#7eb8f7"};
+const TYPE_BG={event:"#2d2200",char:"#2d2000",loc:"#1a2a4a"};
+
+let sel=null;
+const svg=d3.select("#svg");
+const W=()=>document.getElementById("canvas").clientWidth;
+const H=()=>document.getElementById("canvas").clientHeight;
+
+function init(){
+  svg.selectAll("*").remove();
+  const nodes=NODES.map(n=>({...n}));
+  const links=EDGES.map(e=>({source:e.s,target:e.t}));
+  const w=W(),h=H();
+
+  const defs=svg.append("defs");
+  const f=defs.append("filter").attr("id","cgw").attr("x","-50%").attr("y","-50%").attr("width","200%").attr("height","200%");
+  f.append("feGaussianBlur").attr("stdDeviation","6").attr("result","b");
+  const m=f.append("feMerge");
+  m.append("feMergeNode").attr("in","b"); m.append("feMergeNode").attr("in","SourceGraphic");
+
+  // Arrow marker
+  const mk=defs.append("marker").attr("id","carr").attr("markerWidth","8").attr("markerHeight","8").attr("refX","6").attr("refY","3").attr("orient","auto");
+  mk.append("path").attr("d","M0,0 L0,6 L8,3 z").attr("fill","#ffffff15");
+
+  const g=svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.3,3]).on("zoom",e=>g.attr("transform",e.transform)));
+
+  const gL=g.append("g").selectAll("line").data(links).join("line")
+    .attr("stroke","#ffffff10").attr("stroke-width",1.5)
+    .attr("marker-end","url(#carr)");
+
+  const gN=g.append("g").selectAll("g").data(nodes).join("g")
+    .attr("cursor","pointer")
+    .call(d3.drag().on("start",ds).on("drag",dd).on("end",de))
+    .on("click",nodeClick);
+
+  gN.each(function(d){
+    const e=d3.select(this);
+    e.append("circle").attr("r",d.r+4).attr("fill",TYPE_COLOR[d.type]+"10");
+    e.append("circle").attr("r",d.r).attr("fill",TYPE_BG[d.type]).attr("stroke",TYPE_COLOR[d.type]).attr("stroke-width",1.5);
+    const lines=d.label.split("\n");
+    lines.forEach((l,i)=>{
+      e.append("text").attr("y",(i-(lines.length-1)/2)*11+3).attr("font-size",8).attr("fill","#ddd").attr("text-anchor","middle").attr("font-weight","600").text(l);
+    });
+  });
+
+  const sim=d3.forceSimulation(nodes)
+    .force("link",d3.forceLink(links).id(d=>d.id).distance(90).strength(0.4))
+    .force("charge",d3.forceManyBody().strength(-400))
+    .force("center",d3.forceCenter(w/2,h/2))
+    .force("collide",d3.forceCollide(d=>d.r+16))
+    .on("tick",()=>{
+      gL.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+      gN.attr("transform",d=>`translate(${d.x},${d.y})`);
+    });
+
+  function ds(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}
+  function dd(e,d){d.fx=e.x;d.fy=e.y;}
+  function de(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
+
+  function nodeClick(event,d){
+    event.stopPropagation();
+    sel=sel===d.id?null:d.id;
+    document.getElementById("inst").style.display=sel?"none":"block";
+    if(!sel){clearPanel();gN.attr("opacity",1).selectAll("circle").attr("filter",null);gL.attr("stroke","#ffffff10").attr("stroke-width",1.5);return;}
+    // Find cascade
+    const affected=new Set([sel]);
+    let frontier=new Set([sel]);
+    for(let depth=0;depth<4;depth++){
+      const next=new Set();
+      links.forEach(l=>{
+        const s=typeof l.source==="object"?l.source.id:l.source;
+        const t=typeof l.target==="object"?l.target.id:l.target;
+        if(frontier.has(s)&&!affected.has(t)){affected.add(t);next.add(t);}
+      });
+      frontier=next;
+      if(!frontier.size)break;
+    }
+    gN.attr("opacity",d2=>affected.has(d2.id)||d2.id===sel?1:0.1);
+    gN.filter(d2=>d2.id===sel).selectAll("circle:last-of-type").attr("filter","url(#cgw)");
+    gN.filter(d2=>affected.has(d2.id)&&d2.id!==sel).selectAll("circle:last-of-type").attr("stroke","#e06060").attr("stroke-width",2);
+    gL.attr("stroke",l=>{
+      const s=typeof l.source==="object"?l.source.id:l.source;
+      const t=typeof l.target==="object"?l.target.id:l.target;
+      return (s===sel||affected.has(s))&&affected.has(t)?"#e0606060":"#ffffff05";
+    }).attr("stroke-width",l=>{
+      const s=typeof l.source==="object"?l.source.id:l.source;
+      return s===sel?2:1;
+    });
+    showPanel(d,affected);
+  }
+
+  svg.on("click",()=>{sel=null;clearPanel();gN.attr("opacity",1).selectAll("circle").attr("filter",null).attr("stroke",null);gL.attr("stroke","#ffffff10").attr("stroke-width",1.5);document.getElementById("inst").style.display="block";});
+  window._sim=sim;
+}
+
+function showPanel(d,affected){
+  const panel=document.getElementById("panel");
+  panel.classList.add("open");
+  document.getElementById("pi-title").textContent=d.label.replace("\n"," ");
+  document.getElementById("pi-desc").textContent=d.desc;
+  const impacts=[...affected].filter(id=>id!==d.id).map(id=>{
+    const n=NODES.find(x=>x.id===id);
+    if(!n)return "";
+    return `<div class="impact-item" style="background:#6a1a1a22;border-left:2px solid #e06060">
+      <span style="color:#e06060;font-weight:600">&#9654; ${n.label.replace("\n"," ")}</span><br>
+      <span style="font-size:9px;color:#888">${n.desc.slice(0,80)}...</span>
+    </div>`;
+  }).join("");
+  document.getElementById("pi-impacts").innerHTML=`<div style="font-size:9px;color:#e06060;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#9888; ${[...affected].length-1} elements affected</div>${impacts}`;
+}
+
+function clearPanel(){
+  document.getElementById("panel").classList.remove("open");
+}
+window.clearSel=function(){sel=null;clearPanel();};
+window.addEventListener("resize",init);
+init();
+</script></body></html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Othelia — Relationship Heatmap</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060610;color:#e0e0e8;font-family:"Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;border-bottom:1px solid #1a1a2e;background:#0a0a18;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px}
+a.back{font-size:11px;color:#555;text-decoration:underline;margin-left:auto}
+a.back:hover{color:#c9a84c}
+.banner{padding:6px 20px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;font-size:10px;color:#444;display:flex;gap:10px;align-items:center;flex-shrink:0}
+.pill{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600}
+.wrap{flex:1;display:flex;overflow:hidden}
+.main{flex:1;overflow:auto;padding:20px}
+.panel{width:280px;border-left:1px solid #1a1a2e;background:#0a0a18;overflow-y:auto;padding:16px;flex-shrink:0}
+.panel.hide{display:none}
+.panel h2{font-size:13px;color:#c9a84c;margin-bottom:6px}
+.panel p{font-size:11px;color:#888;line-height:1.6}
+table{border-collapse:separate;border-spacing:2px}
+th{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.5px;padding:0 4px 8px;white-space:nowrap}
+th.title-h{font-size:8px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);padding:0 2px 6px;max-width:28px;color:#666}
+.pair-label{font-size:10px;color:#666;white-space:nowrap;padding-right:8px;text-align:right}
+.cell{width:36px;height:32px;border-radius:4px;cursor:pointer;transition:filter .15s;position:relative}
+.cell:hover{filter:brightness(1.4);transform:scale(1.05)}
+.cell.empty{background:#0d0d18;cursor:default}
+.cell.empty:hover{filter:none;transform:none}
+.legend{padding:8px 20px;border-top:1px solid #1a1a2e;background:#0a0a18;display:flex;gap:14px;font-size:10px;color:#444;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.lsq{width:12px;height:12px;border-radius:2px;display:inline-block;margin-right:3px}
+.rel-label{font-size:10px;font-weight:600}
+</style></head>
+<body>
+<header>
+<div class="logo">&#x2B21; RELATIONSHIP HEATMAP</div>
+<div style="font-size:10px;color:#333">How character relationships evolve across story time — click any cell to read the story</div>
+<a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back</a>
+</header>
+<div class="banner">
+  <span>&#9432; Solves: <strong style="color:#ddd">Memory/Recall Failure</strong> (P3) — "Has this character relationship been established?" answered in seconds.</span>
+  <span class="pill" style="background:#80c06018;border:1px solid #80c06033;color:#80c060">CharacterAppearance</span>
+  <span class="pill" style="background:#f0c04018;border:1px solid #f0c04033;color:#f0c040">CanonicalCharacter</span>
+  <span class="pill" style="background:#7eb8f718;border:1px solid #7eb8f733;color:#7eb8f7">FranchiseTitle.storyOrder</span>
+</div>
+<div class="wrap">
+<div class="main" id="main"></div>
+<div class="panel hide" id="panel">
+  <button onclick="document.getElementById('panel').classList.add('hide')" style="float:right;background:none;border:none;color:#444;cursor:pointer;font-size:16px">&#10005;</button>
+  <h2 id="p-title"></h2>
+  <div class="rel-label" id="p-rel" style="margin-bottom:10px"></div>
+  <p id="p-story"></p>
+</div>
+</div>
+<div class="legend">
+  <span><span class="lsq" style="background:#3a6a3a"></span>Alliance / Loyalty</span>
+  <span><span class="lsq" style="background:#6a1a1a"></span>Enemy / Conflict</span>
+  <span><span class="lsq" style="background:#4a3a6a"></span>Mentor / Mentored</span>
+  <span><span class="lsq" style="background:#6a4a1a"></span>Family / Bond</span>
+  <span><span class="lsq" style="background:#1a4a5a"></span>Complex / Ambivalent</span>
+  <span><span class="lsq" style="background:#1a1a2e"></span>Not present together</span>
+</div>
+<script>
+const TITLES = [
+  {id:"dp1",name:"Dune Pt.1",yr:2021},{id:"df84",name:"Dune 1984",yr:1984},
+  {id:"dn",name:"Dune Novel",yr:1965},{id:"dp2",name:"Dune Pt.2",yr:2024},
+  {id:"dm",name:"Messiah",yr:1969},{id:"cod3",name:"Children TV",yr:2003},
+  {id:"codb",name:"Children",yr:1976},{id:"ge",name:"God Emperor",yr:1981},
+];
+
+// Relationship data: pair -> title -> {type, story}
+// types: A=alliance, E=enemy, M=mentor, F=family, C=complex
+const REL = {
+  "Paul + Chani":{
+    dp1:{t:"C",c:"#1a4a5a",story:"Paul sees Chani in prescient visions before they meet. When they finally encounter each other, there is recognition but also wariness — she is Fremen, he is the outsider noble who might be the fulfillment of a prophecy she is skeptical of."},
+    dn:{t:"A",c:"#3a6a3a",story:"In the novel, Chani becomes Paul's Fremen partner and eventually bears his children. She is his anchor to the desert and to genuine human connection amid the growing religious fervor around him."},
+    dp2:{t:"C",c:"#1a4a5a",story:"Villeneuve's most significant deviation: Chani never fully accepts Paul's messianic role. She loves the man but rejects the myth. When he embraces the Jihad, she rides away into the desert. The most honest portrayal of what Paul's choice costs."},
+    dm:{t:"F",c:"#6a4a1a",story:"By Dune Messiah, Chani and Paul have twins — Leto and Ghanima. She dies giving birth, the death Paul foresaw and could not prevent. Her loss destroys Paul's will to continue as emperor. The Fremen woman who kept him human is gone."},
+  },
+  "Paul + Duncan":{
+    dp1:{t:"A",c:"#3a6a3a",story:"Duncan Idaho is Paul's closest friend and the finest warrior in House Atreides. He protects Paul with complete loyalty — and dies doing exactly that, holding off Sardaukar troops to buy Paul time to escape. His sacrifice haunts Paul for the rest of the saga."},
+    df84:{t:"A",c:"#3a6a3a",story:"Lynch's version shows Duncan and Paul's bond warmly. Richard Jordan's performance makes the sacrifice hit hard — we feel what Paul loses before the story has barely begun."},
+    dn:{t:"A",c:"#3a6a3a",story:"The novel establishes Duncan as the ideal Atreides warrior: skilled, loyal, warm. His death is the first sign that the noble rules Paul was raised with will not protect him in the desert."},
+    dp2:{t:"A",c:"#3a6a3a",story:"Duncan is present in Paul's memories and Fremen accounts. His sacrifice continues to define Paul's sense of what loyalty costs."},
+    dm:{t:"C",c:"#1a4a5a",story:"The Bene Tleilax resurrect Duncan as a Ghola named Hayt, programmed to assassinate Paul. Paul's genuine love forces Hayt to recover his original memories — and he dies again rather than betray his friend. The bond survives death."},
+    codb:{t:"C",c:"#1a4a5a",story:"Second ghola, raised among Fremen. His resurrection is becoming a philosophical question: is this Duncan Idaho or a copy with his memories? The answer matters for both Paul and for the saga's meditation on identity."},
+    ge:{t:"M",c:"#4a3a6a",story:"3,500 years of ghola cycles. Leto II keeps resurrecting Duncan as a test of humanity's capacity for rebellion. Duncan always eventually refuses. He is the measure of what humans could be — which is why Leto will not stop bringing him back."},
+  },
+  "Paul + Jessica":{
+    dp1:{t:"F",c:"#6a4a1a",story:"Mother and son navigate Arrakis together after the betrayal. Jessica's Bene Gesserit training keeps them alive. But Paul is starting to see further than she can guide him — the child is outgrowing the teacher."},
+    dn:{t:"F",c:"#6a4a1a",story:"The novel explores their bond with full complexity: Jessica loves Paul but is also a Bene Gesserit agent following orders she does not fully understand. Her decision to bear a son — disobeying the Sisterhood — set everything in motion."},
+    dp2:{t:"C",c:"#1a4a5a",story:"Villeneuve makes Jessica's agenda more explicit. She is actively promoting Paul's messianic role among the Fremen even as Paul himself resists. Her love and her manipulation are inseparable. Paul begins to see what she is doing."},
+  },
+  "Paul + Stilgar":{
+    dp1:{t:"C",c:"#1a4a5a",story:"Stilgar takes Paul in because he recognizes Paul's abilities — but he is deeply skeptical of outsiders and their prophecies. The Fremen have been exploited by messianic myths before. Trust is earned slowly."},
+    dn:{t:"A",c:"#3a6a3a",story:"By the end of the novel, Stilgar is fully committed to Paul. His traditional Fremen authority is now in service of the new emperor's cause. The skeptic has become a true believer."},
+    dp2:{t:"A",c:"#3a6a3a",story:"Stilgar in Part Two has become almost comically devoted — he interprets Paul's most offhand comments as divine wisdom. Where Chani sees tragedy, Stilgar sees destiny. His devotion is both moving and unsettling."},
+    dm:{t:"A",c:"#3a6a3a",story:"Remains loyal through Paul's troubled emperorship. When Paul abdicates and walks into the desert, Stilgar sees it as the final act of a great leader rather than abandonment. Loyalty that cannot be broken by reality."},
+    codb:{t:"C",c:"#1a4a5a",story:"Now serving Paul's children. Watches Alia's descent with growing horror. His devotion to the Atreides house conflicts with what he knows is happening. He cannot bring himself to act against her."},
+  },
+  "Jessica + Baron":{
+    dn:{t:"E",c:"#6a1a1a",story:"The Baron orchestrated the destruction of House Atreides — killing Jessica's lover, Duke Leto. She survived by sheer Bene Gesserit training. The hatred is absolute, though they rarely share a scene directly."},
+    dp1:{t:"E",c:"#6a1a1a",story:"The Baron's plan to destroy House Atreides sets everything Jessica and Paul must endure in motion. He is the architect of her grief."},
+    dp2:{t:"E",c:"#6a1a1a",story:"Jessica does not directly confront the Baron in Part Two — but her promotion of Paul's rise is in part revenge made political. His death comes from Alia, not from Jessica."},
+  },
+  "Alia + Baron":{
+    codb:{t:"E",c:"#6a1a1a",story:"The most horrifying relationship in the saga. The Baron's consciousness, carried in Alia's genetic memory, eventually takes over her mind entirely. The man who destroyed House Atreides conquers it from within through the body of Paul's sister. She eventually throws herself from a window when she recognizes what she has become."},
+    dm:{t:"C",c:"#1a4a5a",story:"Even in Dune Messiah, the Baron's presence in Alia's ancestral memory is mentioned as a danger — a dominant personality that could overwhelm her individual consciousness. The warning is there before the catastrophe."},
+    dp2:{t:"M",c:"#4a3a6a",story:"Alia is born fully conscious during Part Two. The Baron's memory is already present — she kills him as an infant. The murder of her oppressor happens before she has words to name what she did."},
+  },
+  "Leto II + Duncan":{
+    codb:{t:"M",c:"#4a3a6a",story:"Leto II, choosing the Golden Path, sees Duncan Idaho across thousands of years of future history as a recurring necessity. Duncan is the human test that the universe will always need. Leto begins the ghola program that will continue for 3,500 years."},
+    ge:{t:"C",c:"#1a4a5a",story:"The most philosophically rich relationship in the saga. Leto resurrects Duncan hundreds of times. Duncan always eventually rebels. Leto allows it — needs it — because a humanity that cannot rebel is a humanity that cannot survive. The God Emperor and his eternal rebel are two sides of the same purpose."},
+  },
+  "Paul + Baron":{
+    dp1:{t:"E",c:"#6a1a1a",story:"The Baron destroyed Paul's family and world. They never face each other directly in Part One — the Baron's plan works through proxies. Paul knows who ordered his father's death."},
+    dp2:{t:"E",c:"#6a1a1a",story:"Paul does not kill the Baron himself — that falls to Alia. But Paul's entire rise is in opposition to everything the Baron represents: brutal domination vs Fremen freedom. The confrontation is structural rather than personal."},
+    dn:{t:"E",c:"#6a1a1a",story:"The novel makes explicit that Paul is the loose end the Baron did not eliminate. Their conflict is the axis of the entire story — old aristocratic power vs the new messianic force it accidentally created."},
+  },
+};
+
+const PAIRS = Object.keys(REL);
+
+function build(){
+  const table = document.createElement("table");
+  // Header row
+  const hr = document.createElement("tr");
+  const corner = document.createElement("th");
+  corner.textContent = "Character Pair";
+  hr.appendChild(corner);
+  TITLES.forEach(t=>{
+    const th = document.createElement("th");
+    th.className="title-h";
+    th.textContent=t.name+" '"+String(t.yr).slice(-2);
+    hr.appendChild(th);
+  });
+  table.appendChild(hr);
+
+  PAIRS.forEach(pair=>{
+    const tr = document.createElement("tr");
+    const label = document.createElement("td");
+    label.className="pair-label";
+    label.textContent=pair;
+    tr.appendChild(label);
+    TITLES.forEach(t=>{
+      const td = document.createElement("td");
+      const rel = REL[pair][t.id];
+      if(rel){
+        td.className="cell";
+        td.style.background=rel.c;
+        td.title=pair+" in "+t.name;
+        td.addEventListener("click",()=>showPanel(pair,t,rel));
+      } else {
+        td.className="cell empty";
+        td.style.background="#0d0d18";
+      }
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  document.getElementById("main").appendChild(table);
+}
+
+function showPanel(pair,t,rel){
+  const types={A:"Alliance / Loyalty",E:"Enemy / Conflict",M:"Mentor Relationship",F:"Family / Deep Bond",C:"Complex / Ambivalent"};
+  const colors={A:"#7ec87e",E:"#e06060",M:"#7eb8f7",F:"#c9a84c",C:"#b07ef7"};
+  document.getElementById("p-title").textContent=pair+" — "+t.name+" ("+t.yr+")";
+  const relEl=document.getElementById("p-rel");
+  relEl.textContent=types[rel.t]||"";
+  relEl.style.color=colors[rel.t]||"#888";
+  document.getElementById("p-story").textContent=rel.story;
+  document.getElementById("panel").classList.remove("hide");
+}
+
+build();
+</script></body></html>
