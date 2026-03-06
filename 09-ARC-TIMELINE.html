@@ -263,24 +263,53 @@ function render(){
       hit.addEventListener("mouseleave",()=>tip.style.display="none");
       hit.addEventListener("click",()=>{activeChar=activeChar===ch.id?null:ch.id;render();renderList();showPanel();});
 
-      // Annotation card at arc peak when active
+      // Large annotation card at arc peak when active — uses full upper canvas space
       if(isOn){
         const app=ch.arc[b.id];
         if(app){
-          const mx=(x1+x2)/2, py=cy-4;
-          const cardW=Math.min(step*0.9, 120);
-          // Background card
-          mkEl("rect",{x:mx-cardW/2,y:py-28,width:cardW,height:26,rx:5,fill:"#0d0d18",
-            "stroke":ch.color,"stroke-width":1,opacity:.9},svg);
-          // Phase dot
-          mkEl("circle",{cx:mx-cardW/2+8,cy:py-15,r:3,fill:ch.color,opacity:.8},svg);
-          // Headline text — truncate
-          const label=app.headline.length>18?app.headline.slice(0,16)+"...":app.headline;
-          mkEl("text",{x:mx-cardW/2+16,y:py-11,"font-size":8,fill:"#ddd","font-weight":"600"},svg).textContent=label;
-          // Phase label
-          mkEl("text",{x:mx-cardW/2+8,y:py-1,"font-size":7,fill:ch.color},svg).textContent=app.phase||"";
-          // Connector line
-          mkEl("line",{x1:mx,y1:py,x2:mx,y2:cy+4,stroke:ch.color,"stroke-width":1,opacity:.3},svg);
+          const mx=(x1+x2)/2;
+          // Stagger card heights based on arc index to avoid overlap
+          const cardH=78;
+          const cardW=Math.min(step*0.95, 155);
+          // Place cards in upper canvas — distribute vertically by index
+          const vertSlots=[0.06,0.25,0.44,0.62];
+          const slot=vertSlots[i%vertSlots.length];
+          const cardY=Math.floor(H*slot);
+          // Connector line from card bottom to arc peak
+          mkEl("line",{x1:mx,y1:cardY+cardH,x2:mx,y2:cy,stroke:ch.color,"stroke-width":1,
+            opacity:.25,"stroke-dasharray":"3,4"},svg);
+          // Card dot at arc peak
+          mkEl("circle",{cx:mx,cy:cy,r:4,fill:ch.color,opacity:.9},svg);
+          // Card background
+          mkEl("rect",{x:mx-cardW/2,y:cardY,width:cardW,height:cardH,rx:6,
+            fill:"#0d0d18","stroke":ch.color,"stroke-width":1.2,opacity:.97},svg);
+          // Header band
+          mkEl("rect",{x:mx-cardW/2,y:cardY,width:cardW,height:18,rx:6,
+            fill:ch.color+"25"},svg);
+          mkEl("rect",{x:mx-cardW/2,y:cardY+12,width:cardW,height:6,
+            fill:ch.color+"25"},svg);
+          // Phase + title name in header
+          mkEl("text",{x:mx-cardW/2+7,y:cardY+12,"font-size":8,fill:ch.color,"font-weight":"700"},svg)
+            .textContent=(app.phase||"")+" • "+t.name;
+          // Headline
+          const hl=app.headline;
+          // Word-wrap headline into 2 lines
+          const words=hl.split(" ");
+          let line1="", line2="";
+          for(const w of words){
+            if((line1+" "+w).length<=22)line1+=(line1?" ":"")+w;
+            else{ line2+=(line2?" ":"")+w; }
+          }
+          mkEl("text",{x:mx-cardW/2+7,y:cardY+29,"font-size":9,fill:"#eee","font-weight":"600"},svg).textContent=line1;
+          if(line2)mkEl("text",{x:mx-cardW/2+7,y:cardY+40,"font-size":9,fill:"#eee","font-weight":"600"},svg).textContent=line2;
+          // Story snippet — 2 lines
+          const snippet=app.story.slice(0,90);
+          const sw2=snippet.split(" ");
+          let sl1="",sl2="";
+          for(const w of sw2){if((sl1+" "+w).length<=26)sl1+=(sl1?" ":"")+w;else sl2+=(sl2?" ":"")+w;}
+          const yOff=line2?53:45;
+          mkEl("text",{x:mx-cardW/2+7,y:cardY+yOff,"font-size":7.5,fill:"#666"},svg).textContent=sl1;
+          if(sl2)mkEl("text",{x:mx-cardW/2+7,y:cardY+yOff+10,"font-size":7.5,fill:"#666"},svg).textContent=sl2+"...";
         }
       }
     }
