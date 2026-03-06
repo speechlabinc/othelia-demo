@@ -34,6 +34,7 @@ a.back:hover{color:#c9a84c}
 <button class="btn on" onclick="setMode('both',this)">Titles + Characters</button>
 <button class="btn" onclick="setMode('chars',this)">Characters Only</button>
 <button class="btn" onclick="setMode('titles',this)">Titles Only</button>
+<button class="btn" id="btn-timeline" onclick="toggleTimeline(this)" style="border-color:#c9a84c88;color:#c9a84c">&#8594; Story Timeline</button>
 </div>
 <a href="OTHELIA-FRANCHISE-DEMO.html" class="back">&#8592; Back to Demo</a>
 </header>
@@ -110,7 +111,7 @@ const ARCS = {
 const TCOLOR = {novel:"#7ec87e",film:"#7eb8f7",tv:"#b07ef7"};
 const TBG    = {novel:"#1a3a1a",film:"#1a2a4a",tv:"#2a1a4a"};
 
-let activeId = null, mode = "both";
+let activeId = null, mode = "both", timelineMode = false;
 const svg = d3.select("#svg");
 const W = () => document.getElementById("canvas").clientWidth;
 const H = () => document.getElementById("canvas").clientHeight;
@@ -198,11 +199,26 @@ function init() {
       .text(d.cdata.name.split(" ")[0]);
   });
 
+  // Timeline mode: fix title X positions by story order
+  const PAD_TL = 80;
+  const titleNodes = nodes.filter(n=>n.type==="title");
+  const maxSX = Math.max(...titleNodes.map(n=>n.tdata.sx||0));
+  if(timelineMode){
+    titleNodes.forEach(n=>{
+      const sx = n.tdata.sx||0;
+      n.fx = PAD_TL + (sx/maxSX)*(w-PAD_TL*2);
+      n.fy = null; // allow vertical float
+    });
+  } else {
+    nodes.forEach(n=>{ n.fx=null; n.fy=null; });
+  }
+
   sim = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d=>d.id).distance(d => d.cid ? 100 : 200).strength(d => d.cid ? 0.35 : 0.1))
-    .force("charge", d3.forceManyBody().strength(d => d.type==="title" ? -900 : -400))
+    .force("link", d3.forceLink(links).id(d=>d.id).distance(d => d.cid ? (timelineMode?80:100) : 200).strength(d => d.cid ? 0.5 : 0.1))
+    .force("charge", d3.forceManyBody().strength(d => d.type==="title" ? (timelineMode?-200:-900) : -400))
     .force("center", d3.forceCenter(w/2, h/2))
     .force("collide", d3.forceCollide(d => d.r+22))
+    .force("y", timelineMode ? d3.forceY(d=>d.type==="title"?h*0.35:h*0.72).strength(d=>d.type==="title"?0.8:0.3) : null)
     .on("tick", () => {
       gLink.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
       gNode.attr("transform", d => `translate(${d.x},${d.y})`);
@@ -255,6 +271,41 @@ function updateHL() {
     const t=typeof d.target==="object"?d.target.id:d.target;
     return (s===activeId||t===activeId) ? 2.5 : 1;
   });
+
+  // In timeline mode: draw character story path through their titles in order
+  svg.selectAll(".char-story-path").remove();
+  if(timelineMode && activeId && activeId.startsWith("c_")){
+    const charId = activeId.replace("c_","");
+    const ch = CHARS.find(c=>c.id===charId);
+    if(ch){
+      const titlesInOrder = TITLES.filter(t=>t.chars.includes(charId))
+        .sort((a,b)=>a.sx-b.sx);
+      const titleNodeMap = {};
+      // Get current positions from simulation
+      sim.nodes().filter(n=>n.type==="title").forEach(n=>{ titleNodeMap[n.id]=n; });
+      const pts = titlesInOrder.map(t=>titleNodeMap[t.id]).filter(Boolean);
+      if(pts.length>1){
+        const g2 = svg.select("g").append("g").attr("class","char-story-path");
+        // Glow path
+        for(let i=0;i<pts.length-1;i++){
+          g2.append("line")
+            .attr("x1",pts[i].x).attr("y1",pts[i].y)
+            .attr("x2",pts[i+1].x).attr("y2",pts[i+1].y)
+            .attr("stroke",ch.color).attr("stroke-width",6).attr("opacity",.15).attr("filter","url(#glow)");
+          g2.append("line")
+            .attr("x1",pts[i].x).attr("y1",pts[i].y)
+            .attr("x2",pts[i+1].x).attr("y2",pts[i+1].y)
+            .attr("stroke",ch.color).attr("stroke-width",2).attr("opacity",.8)
+            .attr("marker-end","url(#tarr)");
+        }
+        // Character name label on first title
+        g2.append("text")
+          .attr("x",pts[0].x).attr("y",pts[0].y-pts[0].r-16)
+          .attr("text-anchor","middle").attr("font-size",10).attr("fill",ch.color).attr("font-weight","700")
+          .text(ch.name+" story path");
+      }
+    }
+  }
 }
 
 function showPanel(d) {
@@ -280,6 +331,13 @@ function showPanel(d) {
 
 window.clickChar = function(id){activeId=id;updateHL();};
 window.clickTitle = function(id){activeId=id;updateHL();};
+window.toggleTimeline = function(btn){
+  timelineMode = !timelineMode;
+  btn.classList.toggle("on", timelineMode);
+  btn.style.background = timelineMode ? "#c9a84c18" : "transparent";
+  init();
+};
+
 window.setMode = function(m, btn){
   mode=m;
   document.querySelectorAll(".btn").forEach(b=>b.classList.remove("on"));
