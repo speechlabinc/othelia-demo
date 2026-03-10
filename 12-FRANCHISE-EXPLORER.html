@@ -46,6 +46,8 @@ svg{width:100%;height:100%}
 </div>
 <div class="banner" id="banner">
   <span>&#9432; <strong style="color:#ddd">Game of Thrones</strong> &mdash; A Game of Thrones (George R.R. Martin novel) &mdash; Real character data from Othelia evaluation golden dataset</span>
+  <span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:#f0c04018;border:1px solid #f0c04033;color:#f0c040">Event-first model</span>
+  <span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:#40c0e018;border:1px solid #40c0e033;color:#40c0e0">Static + Dynamic relationships</span>
   <span class="pill" style="background:#c9a84c18;border:1px solid #c9a84c33;color:#c9a84c">in source control</span>
 </div>
 <div class="wrap">
@@ -243,6 +245,24 @@ function init(){
 
 function showPanel(d){
   const f=FRANCHISE[activeFranchise];
+  const STORYLINES = {
+    got: [
+      {id:"iron_throne",label:"Succession to the Iron Throne",theme:"Power corrupts; duty vs. desire",invested:["Eddard Stark","Cersei Lannister","Robert Baratheon","Joffrey Baratheon"],opposing:["Eddard Stark","Cersei Lannister"],affected:["Sansa Stark","Arya Stark","Jon Snow"]},
+      {id:"nights_watch",label:"The Threat Beyond the Wall",theme:"Ancient threat vs. political blindness",invested:["Jon Snow","Jeor Mormont","Benjen Stark"],opposing:["Others (White Walkers)"],affected:["Bran Stark"]},
+      {id:"targaryen_return",label:"Targaryen Restoration",theme:"Birthright vs. acceptance",invested:["Daenerys Targaryen","Viserys Targaryen"],opposing:["Robert Baratheon"],affected:["Khal Drogo","Ser Jorah Mormont"]},
+    ],
+    bond: [
+      {id:"le_chiffre",label:"Bankrupting Le Chiffre",theme:"Intelligence vs. terrorism financing",invested:["James Bond","Felix Leiter","René Mathis"],opposing:["Le Chiffre"],affected:["Vesper Lynd"]},
+      {id:"vesper_betrayal",label:"Vesper's Loyalty",theme:"Love vs. duty; trust and betrayal",invested:["James Bond","Vesper Lynd"],opposing:["Adolph Gettler"],affected:["M"]},
+    ]
+  };
+  const DYNAMIC_RELS = {
+    got: [
+      {a:"Eddard Stark",b:"Cersei Lannister",states:[{state:"NEUTRAL","event":"Ned arrives at King's Landing"},{state:"ENEMY","event":"Ned discovers Jon's true parentage and Cersei's secret"}]},
+      {a:"Daenerys Targaryen",b:"Khal Drogo",states:[{state:"COMPLEX","event":"Forced marriage"},{state:"ROMANTIC","event":"Daenerys learns Dothraki customs and earns Drogo's respect"}]},
+      {a:"James Bond",b:"Vesper Lynd",states:[{state:"COMPLEX","event":"First meeting — mutual skepticism"},{state:"ROMANTIC","event":"Survive Le Chiffre together"},{state:"LOSS","event":"Vesper's betrayal revealed — she dies"}]},
+    ]
+  };
   const rels=f.rels.filter(r=>r.a===d.name||r.b===d.name).map(r=>{
     const other=r.a===d.name?r.b:r.a;
     const color=REL_COLOR[r.type]||"#888";
